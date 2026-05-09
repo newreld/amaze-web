@@ -1,0 +1,148 @@
+/* AMAZE web — global styles */
+
+:root {
+  /* Enchanted Forest palette (matches LevelStyles[0]) — used by the menu. */
+  --bg:    rgb(240, 230, 204);
+  --wall:  rgb(92,  59,  26);
+  --wall-dim: rgba(92, 59, 26, 0.5);
+  --wall-faint: rgba(92, 59, 26, 0.4);
+
+  /* Exposed so JS can read the iOS safe-area-top via getComputedStyle.
+     Falls back to 0 outside iOS / when no safe area is reported. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg);
+  color: var(--wall);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* Canvas is its own positioning root — covers the full DYNAMIC viewport
+   (so the URL bar collapsing/expanding adjusts the height correctly) and
+   leaves DOM overlays (menu, install hint) sitting on top via z-index. */
+canvas#game {
+  display: block;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  touch-action: none;       /* must — keeps Safari from hijacking drag */
+}
+
+/* ---- Menu overlay -------------------------------------------------------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: opacity 0.35s ease;
+}
+.overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.menu-frame {
+  width: min(360px, calc(100vw - 80px));
+  border: 4px solid var(--wall-dim);
+  border-radius: 8px;
+  padding: 48px 28px 36px;
+  text-align: center;
+  background: transparent;
+}
+
+.title {
+  font-family: "Avenir Next", "AvenirNext-Heavy", -apple-system, system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  font-size: 64px;
+  margin: 0 0 8px;
+  color: var(--wall);
+}
+
+.sub {
+  font-size: 18px;
+  margin: 0 0 36px;
+  color: var(--wall-dim);
+}
+
+.diff-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-height: 72px;
+  margin: 0 0 20px;
+  padding: 0 0 8px;
+  background: rgba(92, 59, 26, 0.08);
+  border: 2px solid var(--wall-faint);
+  border-radius: 10px;
+  color: var(--wall);
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+.diff-btn:last-child { margin-bottom: 0; }
+.diff-btn:hover  { background: rgba(92, 59, 26, 0.14); }
+.diff-btn:active { transform: scale(0.98); background: rgba(92, 59, 26, 0.20); }
+
+.diff-name {
+  font-size: 26px;
+  font-weight: 600;
+  margin-top: 14px;
+}
+.diff-detail {
+  font-size: 14px;
+  color: var(--wall-dim);
+  margin-top: 4px;
+}
+
+/* ---- Install hint -------------------------------------------------------- */
+
+.install-hint {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 11;
+  padding: 12px 40px 12px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.install-hint.hidden { display: none; }
+.install-hint button {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: transparent;
+  border: 0;
+  color: white;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}

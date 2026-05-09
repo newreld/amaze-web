@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5b3a1c">
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AMAZE">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <link rel="stylesheet" href="style.css">
+  <title>AMAZE</title>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- Difficulty picker -->
+  <div id="menu" class="overlay">
+    <div class="menu-frame">
+      <h1 class="title">AMAZE</h1>
+      <p class="sub">choose your path</p>
+
+      <button class="diff-btn" data-difficulty="easy">
+        <span class="diff-name">Easy</span>
+        <span class="diff-detail">5 × 7 grid</span>
+      </button>
+      <button class="diff-btn" data-difficulty="medium">
+        <span class="diff-name">Medium</span>
+        <span class="diff-detail">9 × 13 grid</span>
+      </button>
+      <button class="diff-btn" data-difficulty="hard">
+        <span class="diff-name">Hard</span>
+        <span class="diff-detail">13 × 19 grid</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- One-time hint to install on iOS -->
+  <div id="install-hint" class="install-hint hidden">
+    Tap <strong>Share</strong> → <strong>Add to Home Screen</strong> to install.
+    <button id="dismiss-hint" aria-label="dismiss">×</button>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

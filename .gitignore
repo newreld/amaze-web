@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Node-ish (none used now, but in case you add tooling later)
+node_modules/
+.cache/
+
+# Local server logs / temp
+*.log
+
+# Claude working notes — kept locally, not for the public repo
+CLAUDE.md
