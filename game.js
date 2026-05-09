@@ -484,17 +484,24 @@ export class GameScene {
     ctx.fill();
 
     // Inner emoji — sized to fill the disc generously and centred properly.
-    // Apple Color Emoji renders with the visual glyph sitting ABOVE the em
-    // box centre, so a `middle` baseline parks it too high; nudging DOWN
-    // by ~7% of font size lands the visual centre on the disc centre.
+    // Different emoji glyphs have different baselines (a flag is mostly
+    // upper-half + thin pole; a turtle is more body-heavy in the lower
+    // portion).  A fixed nudge can't centre all of them, so use
+    // `measureText().actualBoundingBox*` to find each glyph's true
+    // visual centre and offset accordingly.
     const emoji    = isStart ? this.startEmoji : '🏁';
     const fontSize = Math.max(20, r * 1.55);
     ctx.font         = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
     ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textBaseline = 'alphabetic';
     // Reset fillStyle so any monochrome emoji fallback stays readable.
     ctx.fillStyle    = this.style.wallColor;
-    ctx.fillText(emoji, center.x, center.y + fontSize * 0.07);
+    const m = ctx.measureText(emoji);
+    // Vertical: glyph extends from y - ascent to y + descent in canvas
+    // (Y-down) coords.  Offset places the glyph's visual midpoint on
+    // center.y regardless of the emoji's internal asymmetry.
+    const yOffset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+    ctx.fillText(emoji, center.x, center.y + yOffset);
   }
 
   _withAlpha(rgbStr, a) {

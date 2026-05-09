@@ -4,9 +4,9 @@
 // ----- Difficulty -----------------------------------------------------------
 
 export const Difficulty = Object.freeze({
-  easy:   { id: 'easy',   columns:  5, rows:  7 },
-  medium: { id: 'medium', columns:  9, rows: 13 },
-  hard:   { id: 'hard',   columns: 13, rows: 19 },
+  easy:   { id: 'easy',   columns:  7, rows: 11 },
+  medium: { id: 'medium', columns: 11, rows: 17 },
+  hard:   { id: 'hard',   columns: 15, rows: 23 },
 });
 
 // ----- Maze (Prim's algorithm) ---------------------------------------------
