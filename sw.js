@@ -1,7 +1,7 @@
 // AMAZE service worker — pre-cache everything, serve cache-first.
 // Bump CACHE on every release to force fresh assets on next launch.
 
-const CACHE = "amaze-v13";
+const CACHE = "amaze-v14";
 
 const ASSETS = [
   ".",
@@ -11,6 +11,7 @@ const ASSETS = [
   "maze.js",
   "style.css",
   "manifest.json",
+  "apple-touch-icon.png",
   "icon-192.png",
   "icon-512.png",
   "assets/branch_trunk_1.png",
