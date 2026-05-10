@@ -971,6 +971,14 @@ export class GameScene {
       : [this._cellCenter(this.startCell.col, this.startCell.row),
          this._cellCenter(this.endCell.col,   this.endCell.row)];
 
+    // Final hop: lift the animal ABOVE the flag at the end so both
+    // tokens are visible.  Adds one extra path segment that goes
+    // straight up from the goal cell by ~one cell.
+    if (points.length >= 1) {
+      const last = points[points.length - 1];
+      points.push({ x: last.x, y: last.y - this.cellSize * 0.90 });
+    }
+
     const lengths = [0];
     let total = 0;
     for (let i = 1; i < points.length; i++) {
@@ -979,9 +987,9 @@ export class GameScene {
       lengths.push(total);
     }
 
-    // Walk pace: ~30 ms per cell, clamped 800–2500 ms.  Short mazes
-    // animate snappily, hard mazes don't drag forever.
-    const walkDur = Math.max(800, Math.min(2500, points.length * 30));
+    // Walk pace: ~50 ms per cell, clamped 1100–3500 ms.  Slower than
+    // before so the path reveal reads deliberately on hard mazes.
+    const walkDur = Math.max(1100, Math.min(3500, points.length * 50));
 
     this._winFlash = {
       start: performance.now(),
