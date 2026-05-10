@@ -79,14 +79,21 @@ function _lighten(rgb, amount) {
 function _darken(rgb, amount) {
   return rgb.map(c => c * (1 - amount));
 }
+// Pull a colour partway toward a warm gold target — gives the sun-radial
+// a real "sunset glow" feel instead of just being a lightened version of
+// the bg (which on parchment-cream themes was barely visible).
+function _warmShift(rgb, amount) {
+  const target = [255, 215, 120];
+  return rgb.map((c, i) => c + (target[i] - c) * amount);
+}
 
 function themeGradient(style) {
-  const base = _parseRgb(style.backgroundColor);
-  const sun  = _toRgb(_lighten(base, 0.22));
-  const dark = _toRgb(_darken(base, 0.14));
+  const base    = _parseRgb(style.backgroundColor);
+  const sun     = _toRgb(_lighten(_warmShift(base, 0.32), 0.10));
   const baseStr = _toRgb(base);
+  const dark    = _toRgb(_darken(base, 0.22));
   return `
-    radial-gradient(ellipse at 88% 8%, ${sun} 0%, ${baseStr} 30%, transparent 70%),
+    radial-gradient(ellipse at 85% 10%, ${sun} 0%, ${baseStr} 32%, transparent 70%),
     linear-gradient(180deg, ${baseStr} 0%, ${dark} 100%)
   `;
 }
