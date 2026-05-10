@@ -20,8 +20,7 @@
 <body>
   <canvas id="game"></canvas>
 
-  <!-- In-game top bar: solid wood bar with Back, centered title, Restart.
-       Settings live only on the home screen now. -->
+  <!-- In-game top bar: Back · (title + acorn HUD stacked) · Settings · Restart -->
   <header id="game-topbar" class="hidden" aria-hidden="true">
     <button class="topbar-btn icon-btn" id="btn-menu" aria-label="Back to menu">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -30,47 +29,78 @@
               d="M15 6 L9 12 L15 18"/>
       </svg>
     </button>
-    <div class="topbar-title" id="topbar-title">AMAZE</div>
-    <button class="topbar-btn icon-btn" id="btn-restart" aria-label="Restart maze">
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-        <path fill="none" stroke="currentColor" stroke-width="2.2"
-              stroke-linecap="round" stroke-linejoin="round"
-              d="M19 11 A7 7 0 1 0 18.4 14.5"/>
-        <path fill="currentColor"
-              d="M19 6 L19.6 11.5 L14.5 11"/>
-      </svg>
-    </button>
+
+    <div class="topbar-center">
+      <div class="topbar-title" id="topbar-title">AMAZE</div>
+      <div id="acorn-counter" class="acorn-counter hidden" aria-label="Collected acorns">
+        <span class="acorn dim">🌰</span>
+        <span class="acorn dim">🌰</span>
+        <span class="acorn dim">🌰</span>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <button class="topbar-btn icon-btn" id="btn-settings" aria-label="Settings">⚙</button>
+      <button class="topbar-btn icon-btn" id="btn-restart" aria-label="Restart maze">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round"
+                d="M19 11 A7 7 0 1 0 18.4 14.5"/>
+          <path fill="currentColor"
+                d="M19 6 L19.6 11.5 L14.5 11"/>
+        </svg>
+      </button>
+    </div>
   </header>
 
-  <!-- Floating acorn HUD (only when collectibles are on).  Positioned
-       under the top bar, right side. -->
-  <div id="acorn-counter" class="acorn-counter hidden" aria-label="Collected acorns">
-    <span class="acorn dim">🌰</span>
-    <span class="acorn dim">🌰</span>
-    <span class="acorn dim">🌰</span>
-  </div>
-
-  <!-- Difficulty picker -->
+  <!-- Difficulty picker — paper-card design with wooden AMAZE stamp,
+       leaf icons, chevrons, marketing tagline. -->
   <div id="menu" class="overlay">
+    <button class="settings-pill" id="btn-menu-settings" aria-label="Settings">
+      <span class="settings-pill-icon">⚙</span>
+      <span class="settings-pill-label">Settings</span>
+    </button>
+
     <div class="menu-frame">
-      <h1 class="title">AMAZE</h1>
-      <p class="sub">choose your path</p>
+      <span class="rivet rivet-tl"></span>
+      <span class="rivet rivet-tr"></span>
+      <span class="rivet rivet-bl"></span>
+      <span class="rivet rivet-br"></span>
+
+      <div class="title-stamp">AMAZE</div>
+      <p class="sub">Help the raccoon gather every acorn, then trail-blaze a path to the finish flag.</p>
 
       <button class="diff-btn" data-difficulty="easy">
-        <span class="diff-name">Easy</span>
-        <span class="diff-detail">7 × 11 grid</span>
+        <span class="diff-icon">🌱</span>
+        <span class="diff-content">
+          <span class="diff-name">Easy</span>
+          <span class="diff-detail">7 × 11 grid</span>
+        </span>
+        <span class="diff-chevron">›</span>
       </button>
       <button class="diff-btn" data-difficulty="medium">
-        <span class="diff-name">Medium</span>
-        <span class="diff-detail">11 × 17 grid</span>
+        <span class="diff-icon">🌿</span>
+        <span class="diff-content">
+          <span class="diff-name">Medium</span>
+          <span class="diff-detail">11 × 17 grid</span>
+        </span>
+        <span class="diff-chevron">›</span>
       </button>
       <button class="diff-btn" data-difficulty="hard">
-        <span class="diff-name">Hard</span>
-        <span class="diff-detail">15 × 23 grid</span>
+        <span class="diff-icon">🌴</span>
+        <span class="diff-content">
+          <span class="diff-name">Hard</span>
+          <span class="diff-detail">15 × 23 grid</span>
+        </span>
+        <span class="diff-chevron">›</span>
       </button>
-
-      <button class="settings-link" id="btn-menu-settings" aria-label="Settings">⚙</button>
     </div>
+
+    <p class="menu-marketing">
+      A finger-drawn maze adventure for all ages — wind through woody jungle paths,
+      dodge dead-ends, and finish before any little explorer loses interest. Pick a
+      forest size and start tracing.
+    </p>
   </div>
 
   <!-- Win modal — pops in after the canvas walk-cinema completes. -->

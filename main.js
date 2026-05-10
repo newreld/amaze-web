@@ -40,6 +40,7 @@ toggleCollectibles.addEventListener('change', () => {
 function openSettings()  { settingsOverlay.classList.remove('hidden'); }
 function closeSettings() { settingsOverlay.classList.add('hidden'); }
 
+document.getElementById('btn-settings').addEventListener('click', openSettings);
 document.getElementById('btn-menu-settings').addEventListener('click', openSettings);
 document.getElementById('btn-close-settings').addEventListener('click', closeSettings);
 // Tap the dim backdrop (anywhere outside the frame) to close as well.

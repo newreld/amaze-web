@@ -31,6 +31,9 @@ const COLLECTIBLE_EMOJI = '🌰';
 // any future UI).  The maze is laid out below this band so its top row
 // can't slide under the button.
 const HEADER_HEIGHT     = 72;
+// Extra breathing room between the bottom of the HTML top bar and the
+// first maze row.  Keeps walls from sitting flush against the chrome.
+const HEADER_BOTTOM_GAP = 16;
 
 // Padding around the maze inside the viewport.  Scales with viewport so the
 // hard maze (13×19) doesn't get squeezed on phones / tall iPads.
@@ -188,8 +191,8 @@ export class GameScene {
     // also have to reserve enough room for the maze underneath.
     const safeTop    = safeAreaTop();
     const safeBottom = safeAreaBottom();
-    this._headerTop  = safeTop;                     // y where header starts
-    this._headerBot  = safeTop + HEADER_HEIGHT;     // y where maze can start
+    this._headerTop  = safeTop;                                     // y where header starts
+    this._headerBot  = safeTop + HEADER_HEIGHT + HEADER_BOTTOM_GAP; // y where maze can start
 
     const pad    = viewportPadding(cw, ch);
     const availW = cw - pad * 2;
