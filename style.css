@@ -73,13 +73,13 @@ canvas#game {
 }
 
 /* Sun illustration — only on the difficulty menu (not in-game).
-   Vertically centred next to the menu card on the right, sized
-   generously enough to read as a real subject in the background. */
+   Anchored relative to the viewport corner: 25% from the top,
+   35% from the right.  Sized generously so it reads as a real
+   subject in the background. */
 #menu .sun {
   position: absolute;
-  top: 50%;
-  right: clamp(20px, 8vw, 140px);
-  transform: translateY(-50%);
+  top: 25%;
+  right: 35%;
   width:  clamp(120px, 18vw, 240px);
   height: clamp(120px, 18vw, 240px);
   background: radial-gradient(circle, #fff6cf 0%, #fde9a8 60%, #f5d790 100%);
