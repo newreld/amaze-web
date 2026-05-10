@@ -60,10 +60,45 @@ function updateAcornCounter() {
     .join('');
 }
 
-// Body background is the warm sun gradient defined in style.css — same
-// across menu, game, and modals.  We no longer mutate it from JS as the
-// theme cycles, so this used to be `applyTheme(MENU_THEME)` and is now a
-// no-op (kept here as a stub in case we want per-theme tints later).
+// ----- Per-theme background gradient --------------------------------------
+// Computed from each theme's backgroundColor: lightened "sun" radial in the
+// top-right, base colour mid-tone, darker shade at the bottom of the
+// linear pass.  Reused by the menu (LevelStyles[0]) and by every maze
+// theme cycled through during gameplay.
+
+function _parseRgb(s) {
+  const m = s.match(/rgb\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)/);
+  return m ? [+m[1], +m[2], +m[3]] : [0, 0, 0];
+}
+function _toRgb(arr) {
+  return `rgb(${Math.round(arr[0])}, ${Math.round(arr[1])}, ${Math.round(arr[2])})`;
+}
+function _lighten(rgb, amount) {
+  return rgb.map(c => c + (255 - c) * amount);
+}
+function _darken(rgb, amount) {
+  return rgb.map(c => c * (1 - amount));
+}
+
+function themeGradient(style) {
+  const base = _parseRgb(style.backgroundColor);
+  const sun  = _toRgb(_lighten(base, 0.22));
+  const dark = _toRgb(_darken(base, 0.14));
+  const baseStr = _toRgb(base);
+  return `
+    radial-gradient(ellipse at 88% 8%, ${sun} 0%, ${baseStr} 30%, transparent 70%),
+    linear-gradient(180deg, ${baseStr} 0%, ${dark} 100%)
+  `;
+}
+
+function applyTheme(style) {
+  document.body.style.background = themeGradient(style);
+  document.body.style.backgroundAttachment = 'fixed';
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', style.backgroundColor);
+}
+
+const MENU_THEME = LevelStyles[0];
+applyTheme(MENU_THEME);
 
 // ----- Canvas DPR sizing ---------------------------------------------------
 // Read the canvas's ACTUAL rendered size (set by CSS via 100vw/100dvh) and
@@ -112,6 +147,7 @@ function backToMenu() {
   acornCounter.classList.add('hidden');
   winModal.classList.add('hidden');
   menu.classList.remove('hidden');
+  applyTheme(MENU_THEME);
 }
 
 function startGame(difficulty, styleIndex = 0) {
@@ -121,6 +157,7 @@ function startGame(difficulty, styleIndex = 0) {
     styleIndex,
     showCollectibles:     settings.collectibles,
     onCollectiblesUpdate: updateAcornCounter,
+    onThemeChange:        applyTheme,
     onWin:                showWinModal,
   });
   updateAcornCounter();

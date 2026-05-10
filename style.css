@@ -345,12 +345,40 @@ canvas#game {
 .win-acorns {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 14px;
   margin: 22px 0 14px;
-  font-size: 36px;
+  font-size: 44px;
+  /* Reserve enough vertical room so the acorns don't shift the layout
+     when they're at scale-0 before the keyframe begins. */
+  min-height: 1.2em;
 }
-.win-acorns span { transition: opacity 0.2s ease; }
-.win-acorns span.dim { opacity: 0.30; }
+.win-acorns span {
+  display: inline-block;
+  opacity: 0;
+  transform: scale(0);
+  transform-origin: 50% 50%;
+  /* Each acorn is staggered via :nth-child below.  cubic-bezier with a
+     >1 second control point gives a satisfying overshoot pop. */
+  animation: acorn-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.win-acorns span:nth-child(1) { animation-delay: 0.30s; }
+.win-acorns span:nth-child(2) { animation-delay: 0.60s; }
+.win-acorns span:nth-child(3) { animation-delay: 0.90s; }
+.win-acorns span.dim {
+  /* Missed acorns still pop in for layout consistency, but settle dim. */
+  animation-name: acorn-pop-dim;
+}
+
+@keyframes acorn-pop {
+  0%   { opacity: 0;    transform: scale(0); }
+  60%  { opacity: 1;    transform: scale(1.30); }
+  100% { opacity: 1;    transform: scale(1); }
+}
+@keyframes acorn-pop-dim {
+  0%   { opacity: 0;    transform: scale(0); }
+  60%  { opacity: 0.30; transform: scale(1.20); }
+  100% { opacity: 0.30; transform: scale(1); }
+}
 
 .win-tagline {
   color: var(--wall);

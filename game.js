@@ -111,18 +111,20 @@ export class GameScene {
    * @param {{columns:number, rows:number, id:string}} difficulty
    * @param {{
    *   onCollectiblesUpdate?: () => void,
+   *   onThemeChange?:        (style: object) => void,
    *   onWin?:                () => void,
    *   styleIndex?:           number,
    *   showCollectibles?:     boolean,
    * }} [opts]
    */
   constructor(canvas, difficulty, opts = {}) {
-    this.canvas    = canvas;
-    this.ctx       = canvas.getContext('2d');
-    this.diff      = difficulty;
-    this.styleIdx  = opts.styleIndex ?? 0;
-    this._onColUpd = opts.onCollectiblesUpdate ?? (() => {});
-    this._onWin    = opts.onWin ?? (() => {});
+    this.canvas         = canvas;
+    this.ctx            = canvas.getContext('2d');
+    this.diff           = difficulty;
+    this.styleIdx       = opts.styleIndex ?? 0;
+    this._onColUpd      = opts.onCollectiblesUpdate ?? (() => {});
+    this._onThemeChange = opts.onThemeChange         ?? (() => {});
+    this._onWin         = opts.onWin                 ?? (() => {});
     this.showCollectibles = opts.showCollectibles ?? true;
 
     this.timed         = [];      // {x,y,t} subsampled drag points (for trail)
@@ -144,6 +146,10 @@ export class GameScene {
     this._buildLayout();
     this._installInputHandlers();
 
+    // Apply the initial theme bg before the first frame so the page
+    // doesn't briefly show the menu palette behind a different maze.
+    this._onThemeChange(this.style);
+
     Promise.all([...TRUNK_NAMES, ...DROOD_NAMES].map(loadImage))
       .then(() => this._buildMaze())
       .then(() => { this._rafId = requestAnimationFrame(this._tick); });
@@ -153,6 +159,12 @@ export class GameScene {
     this._alive = false;
     cancelAnimationFrame(this._rafId);
     this._removeInputHandlers?.();
+    // Clear the canvas so the previous maze doesn't sit visible behind
+    // the (transparent) menu overlay when the player goes back.
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.restore();
   }
 
   get style() { return LevelStyles[this.styleIdx % LevelStyles.length]; }
@@ -571,38 +583,15 @@ export class GameScene {
     // in index.html and the CSS layer.  Canvas only renders the play
     // surface, the win cinema, and the static markers/collectibles.)
 
-    // Win flash — 🎉 + acorn rating.  Begins AFTER the walking animal
-    // arrives at the goal, not at win time.
+    // Win flash — once the walking-animal animation completes, hand off
+    // to the HTML win modal (which animates the acorn rating in).  No
+    // canvas celebration in between; the modal IS the celebration.
     if (this._winFlash) {
       const wf      = this._winFlash;
       const elapsed = now - wf.start;
       if (elapsed >= wf.end) {
         this._winFlash = null;
-        // Hand off to the HTML win modal — main.js shows it via onWin and
-        // decides what to do next (Home → menu, Again ▶ → nextMaze()).
         this._onWin();
-      } else if (elapsed >= wf.walkDur) {
-        // Celebration phase — short 🎉 burst on the canvas.  The acorn
-        // rating + Home/Again buttons are handled by the HTML win modal
-        // (shown via the onWin callback after this phase ends).
-        const ce        = elapsed - wf.walkDur;
-        const ceTotal   = wf.end - wf.walkDur;
-        const fadeIn    = Math.min(ce / 200, 1);
-        const fadeOut   = ce > ceTotal - 300
-                          ? Math.max(0, 1 - (ce - (ceTotal - 300)) / 300)
-                          : 1;
-        const scale     = 0.5 + 0.5 * Math.min(ce / 200, 1);
-        const baseAlpha = fadeIn * fadeOut;
-
-        ctx.save();
-        ctx.translate(w / 2, h / 2);
-        ctx.scale(scale, scale);
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.globalAlpha  = baseAlpha;
-        ctx.font = '96px sans-serif';
-        ctx.fillText('🎉', 0, 0);
-        ctx.restore();
       }
     }
 
@@ -925,6 +914,7 @@ export class GameScene {
     this.cursor        = { visible: false, x: 0, y: 0 };
     this._winFlash     = null;
     this.isDrawing     = false;
+    this._onThemeChange(this.style);   // body gradient cycles with the theme
     this._buildMaze();
   }
 
@@ -984,9 +974,9 @@ export class GameScene {
       points, lengths,
       totalLen: total,
       walkDur,
-      // Brief 🎉 burst (~0.9 s) — the rating + Home/Again buttons live
-      // in the HTML win modal, so canvas can hand off quickly.
-      end: walkDur + 900,
+      // No canvas celebration — once the animal arrives we hand off
+      // straight to the HTML win modal, which animates the acorns in.
+      end: walkDur,
     };
   }
 
