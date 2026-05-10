@@ -269,6 +269,7 @@ canvas#game {
 }
 .topbar-btn:hover  { background: #ede2c2; }
 .topbar-btn:active { transform: translateY(2px); box-shadow: 0 0 0 #2c1d0a; }
+.topbar-btn svg    { display: block; }   /* drop inline baseline gap */
 
 /* Centre column hosts the acorn HUD pill (no title). */
 .topbar-center {
