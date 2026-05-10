@@ -987,9 +987,11 @@ export class GameScene {
       lengths.push(total);
     }
 
-    // Walk pace: ~50 ms per cell, clamped 1100–3500 ms.  Slower than
-    // before so the path reveal reads deliberately on hard mazes.
-    const walkDur = Math.max(1100, Math.min(3500, points.length * 50));
+    // Walk pace: 50 ms per cell with a small floor so trivial paths
+    // aren't instant.  No upper cap — longer paths get proportionally
+    // longer animations, so the walk speed is consistent regardless of
+    // difficulty instead of squeezing every length into the same time.
+    const walkDur = Math.max(800, points.length * 50);
 
     this._winFlash = {
       start: performance.now(),
