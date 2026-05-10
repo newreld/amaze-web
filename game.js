@@ -422,7 +422,7 @@ export class GameScene {
       vy: Math.sin(angle) * speed - 35,   // slight upward bias
       life,
       maxLife: life,
-      r: 1 + Math.random() * 1.8,
+      r: 0.6 + Math.random() * 1.0,
     });
   }
 
@@ -494,6 +494,9 @@ export class GameScene {
       this._drawCollectibles(now);
 
       // Trail — segments thickening toward the head, fading at the tail.
+      // Max thickness clearly thinner than the cursor head so the head
+      // reads as a distinct marker on top of the line, not the line's
+      // bulge.
       const n = this.timed.length;
       if (n >= 2) {
         ctx.strokeStyle = this.style.trailColor;
@@ -501,7 +504,7 @@ export class GameScene {
         const denom = Math.max(n - 1, 1);
         for (let i = 0; i < n - 1; i++) {
           const t = (i + 1) / denom;
-          ctx.lineWidth = Math.max(0.5, t * this._headR * 2);
+          ctx.lineWidth = Math.max(0.5, t * this._headR * 1.2);
           ctx.beginPath();
           ctx.moveTo(this.timed[i].x,     this.timed[i].y);
           ctx.lineTo(this.timed[i + 1].x, this.timed[i + 1].y);
@@ -634,16 +637,19 @@ export class GameScene {
     const center  = this._cellCenter(col, row);
     const r       = this.cellSize * 0.40;        // marker disc radius
 
-    // Idle "breathing" for the start animal — gentle sin-based scale
-    // around 1.0 so the maze doesn't feel static while the player thinks.
-    // Drawn around the WHOLE token (disc + emoji) so the breathing reads
-    // as the animal moving, not the disc growing under a static glyph.
-    let breathe = 1;
-    if (isStart) breathe = 1 + Math.sin(now * 0.0025) * 0.04;
+    // Idle motion for the start animal — gentle vertical bob of ±2 px
+    // over a ~2.6 s period.  Translate-only (no scale) so the emoji
+    // glyph isn't re-rasterized at fractional sizes each frame, which
+    // produced visible jitter.  Stops as soon as the player records
+    // their first trail point so the animal "freezes alert" once
+    // gameplay begins.
+    let bobY = 0;
+    if (isStart && this.timed.length === 0) {
+      bobY = Math.sin(now * 0.0024) * 2;
+    }
 
     ctx.save();
-    ctx.translate(center.x, center.y);
-    if (breathe !== 1) ctx.scale(breathe, breathe);
+    ctx.translate(center.x, center.y + bobY);
 
     // Solid filled disc — no outline.
     ctx.beginPath();
