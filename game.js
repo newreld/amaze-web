@@ -21,6 +21,10 @@ const START_EMOJIS = [
   '🐹', '🐭', '🦉', '🐦', '🐸', '🦋', '🐛', '🦡',
 ];
 
+// What the cursor picks up.  Acorn matches the forest theme; one item
+// per collectible across all 6 themes for visual consistency.
+const COLLECTIBLE_EMOJI = '🌰';
+
 // Reserved header strip at the top of the viewport for the menu button (and
 // any future UI).  The maze is laid out below this band so its top row
 // can't slide under the button.
@@ -107,10 +111,11 @@ export class GameScene {
     this.styleIdx  = opts.styleIndex ?? 0;
     this.onBack    = opts.onBackToMenu ?? (() => {});
 
-    this.timed     = [];          // {x,y,t} subsampled drag points (for trail)
-    this.foots     = [];          // {x,y} permanent footstep dots
-    this.lastFoot  = null;
-    this.cursor    = { visible: false, x: 0, y: 0 };
+    this.timed         = [];      // {x,y,t} subsampled drag points (for trail)
+    this.foots         = [];      // {x,y} permanent footstep dots
+    this.lastFoot      = null;
+    this.cursor        = { visible: false, x: 0, y: 0 };
+    this.collectibles  = [];      // {col, row, picked, pickedAt}
 
     this.currentCell  = null;
     this.lastResolved = { x: 0, y: 0 };
@@ -225,8 +230,46 @@ export class GameScene {
     this.startEmoji = START_EMOJIS[(Math.random() * START_EMOJIS.length) | 0];
   }
 
+  /** Drop 3 collectible acorns at random dead-end cells (cells with only
+   *  one passage), excluding start and end.  Dead-ends naturally sit OFF
+   *  the solution path, so the player has to detour into a wrong-looking
+   *  branch to grab them.  All three = 3-star rating in the win cinema. */
+  _placeCollectibles() {
+    const TARGET = 3;
+    const candidates = [];
+    for (let col = 0; col < this._gridCols; col++) {
+      for (let row = 0; row < this._gridRows; row++) {
+        if (this.maze.passages[col][row].size !== 1) continue;
+        if (col === this.startCell.col && row === this.startCell.row) continue;
+        if (col === this.endCell.col   && row === this.endCell.row)   continue;
+        candidates.push({ col, row });
+      }
+    }
+    // Tiny mazes might not have 3 dead-ends — fall back to random non-
+    // endpoint cells so the count is always TARGET.
+    if (candidates.length < TARGET) {
+      for (let col = 0; col < this._gridCols; col++) {
+        for (let row = 0; row < this._gridRows; row++) {
+          if (col === this.startCell.col && row === this.startCell.row) continue;
+          if (col === this.endCell.col   && row === this.endCell.row)   continue;
+          if (candidates.some(c => c.col === col && c.row === row)) continue;
+          candidates.push({ col, row });
+        }
+      }
+    }
+    // Fisher-Yates shuffle, take first TARGET.
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    this.collectibles = candidates.slice(0, TARGET).map(c => ({
+      col: c.col, row: c.row, picked: false, pickedAt: 0,
+    }));
+  }
+
   async _buildMaze() {
     this._pickEndpoints();
+    this._placeCollectibles();
     const columns = this._gridCols;
     const rows    = this._gridRows;
     this.maze = new Maze(columns, rows);
@@ -404,6 +447,10 @@ export class GameScene {
       this._drawMarker(this.startCell.col, this.startCell.row, /*isStart*/ true);
       this._drawMarker(this.endCell.col,   this.endCell.row,   /*isStart*/ false);
 
+      // Collectibles between markers and trail so the trail paints over
+      // them when the cursor passes through.
+      this._drawCollectibles(now);
+
       // Trail — segments thickening toward the head, fading at the tail.
       const n = this.timed.length;
       if (n >= 2) {
@@ -442,7 +489,31 @@ export class GameScene {
     ctx.textAlign    = 'left';
     ctx.fillText('← Menu', 32, this._headerTop + HEADER_HEIGHT / 2);
 
-    // Win flash — 🎉 emoji rides on top of the now-faded maze.
+    // Collectible counter — 3 acorns in the top-right of the header band.
+    // Picked = full colour, unpicked = dimmed.  Drawn outside the maze-fade
+    // group so the counter stays visible during the win cinema too.
+    if (this.collectibles.length > 0) {
+      const total      = this.collectibles.length;
+      const cy         = this._headerTop + HEADER_HEIGHT / 2;
+      const counterFs  = 28;
+      const spacing    = 34;
+      const rightEdge  = this.size.w - 24;
+      ctx.font         = `${counterFs}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      const cm = ctx.measureText(COLLECTIBLE_EMOJI);
+      const cyOffset = (cm.actualBoundingBoxAscent - cm.actualBoundingBoxDescent) / 2;
+      for (let i = 0; i < total; i++) {
+        const x = rightEdge - (total - 1 - i) * spacing;
+        ctx.globalAlpha = this.collectibles[i].picked ? 1 : 0.30;
+        ctx.fillStyle = this.style.wallColor;
+        ctx.fillText(COLLECTIBLE_EMOJI, x, cy + cyOffset);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Win flash — 🎉 emoji + collectible-rating stars on top of the
+    // now-faded maze.
     if (this._winFlash) {
       const elapsed = now - this._winFlash.start;
       const total   = 2200;
@@ -454,15 +525,47 @@ export class GameScene {
         const fadeOut = elapsed > total - 300
                         ? Math.max(0, 1 - (elapsed - (total - 300)) / 300)
                         : 1;
-        const scale   = 0.5 + 0.5 * Math.min(elapsed / 200, 1);
+        const scale     = 0.5 + 0.5 * Math.min(elapsed / 200, 1);
+        const baseAlpha = fadeIn * fadeOut;
+        const earned    = this.collectibles.filter(c => c.picked).length;
+        const totalCol  = this.collectibles.length;
+
         ctx.save();
-        ctx.globalAlpha = fadeIn * fadeOut;
         ctx.translate(w / 2, h / 2);
         ctx.scale(scale, scale);
-        ctx.font         = '80px sans-serif';
         ctx.textAlign    = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('🎉', 0, 0);
+
+        // 🎉 nudged up so the stars sit cleanly below it.
+        ctx.globalAlpha = baseAlpha;
+        ctx.font = '80px sans-serif';
+        ctx.fillText('🎉', 0, -45);
+
+        // Three stars — earned ones full colour, unearned dimmed.  Each
+        // star pops in with a small scale-up so the rating feels earned
+        // rather than instantly stamped.
+        if (totalCol > 0) {
+          ctx.font = '54px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+          const spacing  = 70;
+          const popDelay = 350;
+          const popStep  = 200;
+          const popDur   = 220;
+          for (let i = 0; i < totalCol; i++) {
+            const isEarned = i < earned;
+            const x        = (i - (totalCol - 1) / 2) * spacing;
+            const popT     = Math.min(1, Math.max(0,
+              (elapsed - (popDelay + i * popStep)) / popDur));
+            const popScale = isEarned ? 0.4 + popT * 0.6 : 0.5 + popT * 0.5;
+            const alpha    = isEarned ? baseAlpha * popT
+                                      : baseAlpha * popT * 0.30;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(x, 50);
+            ctx.scale(popScale, popScale);
+            ctx.fillText('⭐', 0, 0);
+            ctx.restore();
+          }
+        }
         ctx.restore();
       }
     }
@@ -502,6 +605,50 @@ export class GameScene {
     // center.y regardless of the emoji's internal asymmetry.
     const yOffset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
     ctx.fillText(emoji, center.x, center.y + yOffset);
+  }
+
+  /** Render the maze's 3 collectibles.  Unpicked items pulse softly; a
+   *  recently-picked item briefly scales up + fades for a satisfying pop. */
+  _drawCollectibles(now) {
+    const ctx = this.ctx;
+    const r        = this.cellSize * 0.22;
+    const fontSize = Math.max(14, r * 1.5);
+
+    ctx.font         = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const m = ctx.measureText(COLLECTIBLE_EMOJI);
+    const baseYOffset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+
+    for (const c of this.collectibles) {
+      const center = this._cellCenter(c.col, c.row);
+
+      if (c.picked) {
+        // Pickup animation — scale up + fade out over 500 ms, then gone.
+        const elapsed = now - c.pickedAt;
+        if (elapsed > 500) continue;
+        const t = elapsed / 500;
+        const scale = 1 + t * 1.4;
+        ctx.save();
+        ctx.globalAlpha = 1 - t;
+        ctx.translate(center.x, center.y);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = this.style.wallColor;
+        ctx.fillText(COLLECTIBLE_EMOJI, 0, baseYOffset);
+        ctx.restore();
+      } else {
+        // Soft pulsing glow + emoji.  Phase offset by cell coords so all
+        // three don't pulse in lockstep.
+        const pulse = 1 + Math.sin(now * 0.004 + c.col * 0.7 + c.row * 0.3) * 0.10;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, r * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = this._withAlpha(this.style.trailColor, 0.20);
+        ctx.fill();
+
+        ctx.fillStyle = this.style.wallColor;
+        ctx.fillText(COLLECTIBLE_EMOJI, center.x, center.y + baseYOffset);
+      }
+    }
   }
 
   _withAlpha(rgbStr, a) {
@@ -664,6 +811,16 @@ export class GameScene {
       this.lastResolved = r.pos;
       this.currentCell  = r.cell;
       this._record(r.pos, performance.now());
+
+      // Pick up any acorn whose cell the cursor just entered.
+      for (const c of this.collectibles) {
+        if (!c.picked &&
+            r.cell.col === c.col && r.cell.row === c.row) {
+          c.picked   = true;
+          c.pickedAt = performance.now();
+        }
+      }
+
       if (this._cellsEqual(r.cell, this.endCell)) {
         const ec = this._cellCenter(this.endCell.col, this.endCell.row);
         if (Math.hypot(r.pos.x - ec.x, r.pos.y - ec.y) < this.cellSize * 0.3) {
