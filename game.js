@@ -144,22 +144,9 @@ export class GameScene {
     this._buildLayout();
     this._installInputHandlers();
 
-    this._applyGlobalTheme();
     Promise.all([...TRUNK_NAMES, ...DROOD_NAMES].map(loadImage))
       .then(() => this._buildMaze())
       .then(() => { this._rafId = requestAnimationFrame(this._tick); });
-  }
-
-  /** Sync the document-level background + theme-color meta with the current
-   *  theme so the iOS status-bar area (which shows the body, not the
-   *  canvas) recolors when the maze cycles to a new palette.  Without this,
-   *  the strip behind the OS clock stays the menu's first-theme cream. */
-  _applyGlobalTheme() {
-    const bg = this.style.backgroundColor;
-    document.documentElement.style.backgroundColor = bg;
-    document.body.style.backgroundColor          = bg;
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', bg);
   }
 
   destroy() {
@@ -474,10 +461,10 @@ export class GameScene {
     ctx.save();
     ctx.scale(devicePixelRatio, devicePixelRatio);
 
-    // Background fills always — even during the win flash, so the page
-    // doesn't show through to a different color.
-    ctx.fillStyle = this.style.backgroundColor;
-    ctx.fillRect(0, 0, w, h);
+    // Canvas stays transparent — the body's warm sun-gradient is the
+    // game-screen background, shared with the menu and modals.  Just
+    // clear the previous frame's pixels and paint maze elements on top.
+    ctx.clearRect(0, 0, w, h);
 
     // The HTML win modal's translucent backdrop dims the canvas after
     // the cinema completes, so the canvas stays at full opacity
@@ -938,7 +925,6 @@ export class GameScene {
     this.cursor        = { visible: false, x: 0, y: 0 };
     this._winFlash     = null;
     this.isDrawing     = false;
-    this._applyGlobalTheme();
     this._buildMaze();
   }
 

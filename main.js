@@ -60,18 +60,10 @@ function updateAcornCounter() {
     .join('');
 }
 
-/** Sync the page background + theme-color meta with whichever palette is
- *  currently in view.  Keeps the strip behind the iOS status bar in step
- *  with the rest of the UI when scenes change. */
-function applyTheme(style) {
-  const bg = style.backgroundColor;
-  document.documentElement.style.backgroundColor = bg;
-  document.body.style.backgroundColor          = bg;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg);
-}
-
-const MENU_THEME = LevelStyles[0];   // Enchanted Forest, used by MenuScene
-applyTheme(MENU_THEME);
+// Body background is the warm sun gradient defined in style.css — same
+// across menu, game, and modals.  We no longer mutate it from JS as the
+// theme cycles, so this used to be `applyTheme(MENU_THEME)` and is now a
+// no-op (kept here as a stub in case we want per-theme tints later).
 
 // ----- Canvas DPR sizing ---------------------------------------------------
 // Read the canvas's ACTUAL rendered size (set by CSS via 100vw/100dvh) and
@@ -120,7 +112,6 @@ function backToMenu() {
   acornCounter.classList.add('hidden');
   winModal.classList.add('hidden');
   menu.classList.remove('hidden');
-  applyTheme(MENU_THEME);
 }
 
 function startGame(difficulty, styleIndex = 0) {
