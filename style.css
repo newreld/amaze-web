@@ -72,23 +72,36 @@ canvas#game {
   pointer-events: none;
 }
 
-/* Sun illustration — only on the difficulty menu (not in-game).  Soft
-   pale-cream disc with a wide diffused halo, tucked into the very
-   top-right corner so it reads as background atmosphere rather than a
-   foreground subject. */
+/* Sun illustration — only on the difficulty menu (not in-game).
+   Vertically centred next to the menu card on the right, sized
+   generously enough to read as a real subject in the background. */
 #menu .sun {
   position: absolute;
-  top: clamp(8px, 2.5vh, 24px);
-  right: clamp(8px, 2.5vw, 32px);
-  width:  clamp(60px, 8vw, 90px);
-  height: clamp(60px, 8vw, 90px);
-  background: radial-gradient(circle, #fff6cf 0%, #fde9a8 65%, #f5d790 100%);
+  top: 50%;
+  right: clamp(20px, 8vw, 140px);
+  transform: translateY(-50%);
+  width:  clamp(120px, 18vw, 240px);
+  height: clamp(120px, 18vw, 240px);
+  background: radial-gradient(circle, #fff6cf 0%, #fde9a8 60%, #f5d790 100%);
   border-radius: 50%;
   box-shadow:
-    0 0 50px 14px rgba(255, 230, 140, 0.30),
-    0 0 110px 36px rgba(255, 220, 130, 0.14);
-  opacity: 0.85;
+    0 0 80px 24px rgba(255, 230, 140, 0.30),
+    0 0 160px 60px rgba(255, 220, 130, 0.14);
+  opacity: 0.9;
   pointer-events: none;
+}
+
+/* On narrow phones the menu card already eats the whole horizontal
+   space.  Push the sun back to the top-right corner there so it still
+   reads as atmosphere without overlapping the card. */
+@media (max-width: 600px) {
+  #menu .sun {
+    top: clamp(8px, 3vh, 28px);
+    right: clamp(8px, 3vw, 28px);
+    transform: none;
+    width:  clamp(70px, 16vw, 110px);
+    height: clamp(70px, 16vw, 110px);
+  }
 }
 
 /* Paper card with corner rivets that holds the difficulty selector. */
