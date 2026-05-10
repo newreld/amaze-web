@@ -118,6 +118,189 @@ canvas#game {
   margin-top: 4px;
 }
 
+/* ---- In-game top bar ----------------------------------------------------- */
+/* Sits on top of the canvas at safe-area-top with the same height as the
+   canvas's reserved header band, so the maze stays visually below it.  The
+   bar absorbs pointer events in its area; the canvas keeps full pointer
+   reception below. */
+
+#game-topbar {
+  position: fixed;
+  top: var(--safe-top, 0px);
+  left: 0;
+  right: 0;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  z-index: 8;
+}
+#game-topbar.hidden { display: none; }
+
+.topbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--wall);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s ease;
+}
+.topbar-btn:hover  { background: rgba(92, 59, 26, 0.10); }
+.topbar-btn:active { background: rgba(92, 59, 26, 0.20); transform: scale(0.97); }
+
+.topbar-btn .icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.topbar-btn.icon-btn {
+  font-size: 22px;
+  padding: 8px 12px;
+  min-width: 44px;
+  justify-content: center;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.acorn-counter {
+  display: flex;
+  gap: 4px;
+  font-size: 24px;
+  pointer-events: none;
+}
+.acorn-counter .acorn {
+  transition: opacity 0.18s ease;
+}
+.acorn-counter .acorn.dim { opacity: 0.30; }
+.acorn-counter.hidden { display: none; }
+
+/* ---- Settings overlay ---------------------------------------------------- */
+
+#settings-overlay { z-index: 12; }
+
+.settings-frame {
+  width: min(380px, calc(100vw - 64px));
+  border: 4px solid var(--wall-dim);
+  border-radius: 8px;
+  padding: 28px 24px 22px;
+  background: var(--bg);
+}
+
+.settings-title {
+  margin: 0 0 24px;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--wall);
+  text-align: center;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.toggle-text { display: flex; flex-direction: column; gap: 4px; }
+.toggle-label {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--wall);
+}
+.toggle-detail {
+  font-size: 13px;
+  color: var(--wall-dim);
+  line-height: 1.35;
+}
+
+/* iOS-style toggle switch built from the native checkbox. */
+.toggle-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 52px;
+  height: 32px;
+  flex-shrink: 0;
+  background: rgba(92, 59, 26, 0.20);
+  border-radius: 16px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.18s ease;
+  margin: 0;
+}
+.toggle-input::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.20);
+  transition: transform 0.18s ease;
+}
+.toggle-input:checked        { background: var(--wall); }
+.toggle-input:checked::after { transform: translateX(20px); }
+
+.settings-done {
+  display: block;
+  width: 100%;
+  margin-top: 28px;
+  padding: 14px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--wall);
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: opacity 0.12s ease, transform 0.05s ease;
+}
+.settings-done:hover  { opacity: 0.92; }
+.settings-done:active { transform: scale(0.985); }
+
+/* ---- Settings link on the main menu ------------------------------------- */
+
+.menu-frame { position: relative; }
+
+.settings-link {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: transparent;
+  border: 0;
+  font-size: 22px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--wall);
+  opacity: 0.6;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.12s ease;
+}
+.settings-link:hover { opacity: 1; }
+
 /* ---- Install hint -------------------------------------------------------- */
 
 .install-hint {

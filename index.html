@@ -20,6 +20,23 @@
 <body>
   <canvas id="game"></canvas>
 
+  <!-- In-game top bar: back-to-menu, restart, settings.  Hidden on the
+       difficulty picker, shown during play. -->
+  <header id="game-topbar" class="hidden" aria-hidden="true">
+    <button class="topbar-btn" id="btn-menu" aria-label="Back to menu">
+      <span class="icon">←</span><span class="label">Menu</span>
+    </button>
+    <div id="acorn-counter" class="acorn-counter" aria-label="Collected acorns">
+      <span class="acorn dim">🌰</span>
+      <span class="acorn dim">🌰</span>
+      <span class="acorn dim">🌰</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="topbar-btn icon-btn" id="btn-restart" aria-label="Restart maze">↻</button>
+      <button class="topbar-btn icon-btn" id="btn-settings" aria-label="Settings">⚙</button>
+    </div>
+  </header>
+
   <!-- Difficulty picker -->
   <div id="menu" class="overlay">
     <div class="menu-frame">
@@ -38,6 +55,25 @@
         <span class="diff-name">Hard</span>
         <span class="diff-detail">15 × 23 grid</span>
       </button>
+
+      <button class="settings-link" id="btn-menu-settings" aria-label="Settings">⚙</button>
+    </div>
+  </div>
+
+  <!-- Settings panel — opens from either the in-game top bar or the menu. -->
+  <div id="settings-overlay" class="overlay hidden" role="dialog" aria-label="Settings">
+    <div class="settings-frame">
+      <h2 class="settings-title">Settings</h2>
+
+      <label class="toggle-row" for="toggle-collectibles">
+        <span class="toggle-text">
+          <span class="toggle-label">Collectibles</span>
+          <span class="toggle-detail">Show 3 acorns to collect for star ratings.</span>
+        </span>
+        <input type="checkbox" id="toggle-collectibles" class="toggle-input" />
+      </label>
+
+      <button class="settings-done" id="btn-close-settings">Done</button>
     </div>
   </div>
 

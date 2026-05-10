@@ -3,11 +3,59 @@
 import { Difficulty, LevelStyles } from './maze.js';
 import { GameScene }               from './game.js';
 
-const canvas    = document.getElementById('game');
-const menu      = document.getElementById('menu');
-const installEl = document.getElementById('install-hint');
+const canvas        = document.getElementById('game');
+const menu          = document.getElementById('menu');
+const installEl     = document.getElementById('install-hint');
+const topbar        = document.getElementById('game-topbar');
+const acornCounter  = document.getElementById('acorn-counter');
+const settingsOverlay  = document.getElementById('settings-overlay');
+const toggleCollectibles = document.getElementById('toggle-collectibles');
 
 let scene = null;
+
+// ----- Settings -----------------------------------------------------------
+// Persisted in localStorage so toggles survive reloads/SW updates.
+
+const settings = {
+  // Default ON — collectibles + star ratings on by default for new users.
+  collectibles: localStorage.getItem('amaze.collectibles') !== 'false',
+};
+
+function saveSettings() {
+  localStorage.setItem('amaze.collectibles', String(settings.collectibles));
+}
+
+toggleCollectibles.checked = settings.collectibles;
+toggleCollectibles.addEventListener('change', () => {
+  settings.collectibles = toggleCollectibles.checked;
+  saveSettings();
+  if (scene) scene.setShowCollectibles(settings.collectibles);
+  updateAcornCounter();
+});
+
+function openSettings()  { settingsOverlay.classList.remove('hidden'); }
+function closeSettings() { settingsOverlay.classList.add('hidden'); }
+
+document.getElementById('btn-settings').addEventListener('click', openSettings);
+document.getElementById('btn-menu-settings').addEventListener('click', openSettings);
+document.getElementById('btn-close-settings').addEventListener('click', closeSettings);
+// Tap the dim backdrop (anywhere outside the frame) to close as well.
+settingsOverlay.addEventListener('click', (ev) => {
+  if (ev.target === settingsOverlay) closeSettings();
+});
+
+// ----- HTML acorn counter (driven by GameScene callbacks) -----------------
+function updateAcornCounter() {
+  const cs = scene?.collectibles ?? [];
+  if (!settings.collectibles || cs.length === 0) {
+    acornCounter.classList.add('hidden');
+    return;
+  }
+  acornCounter.classList.remove('hidden');
+  acornCounter.innerHTML = cs
+    .map(c => `<span class="acorn${c.picked ? '' : ' dim'}">🌰</span>`)
+    .join('');
+}
 
 /** Sync the page background + theme-color meta with whichever palette is
  *  currently in view.  Keeps the strip behind the iOS status bar in step
@@ -61,17 +109,26 @@ function handleResize() {
 }
 
 // ----- Scene transitions ---------------------------------------------------
+function backToMenu() {
+  if (!scene) return;
+  scene.destroy();
+  scene = null;
+  topbar.classList.add('hidden');
+  acornCounter.classList.add('hidden');
+  menu.classList.remove('hidden');
+  applyTheme(MENU_THEME);
+}
+
 function startGame(difficulty, styleIndex = 0) {
   menu.classList.add('hidden');
+  topbar.classList.remove('hidden');
   scene = new GameScene(canvas, difficulty, {
     styleIndex,
-    onBackToMenu: () => {
-      scene.destroy();
-      scene = null;
-      menu.classList.remove('hidden');
-      applyTheme(MENU_THEME);   // restore menu palette behind status bar
-    },
+    showCollectibles:    settings.collectibles,
+    onCollectiblesUpdate: updateAcornCounter,
+    onBackToMenu:        backToMenu,
   });
+  updateAcornCounter();
 }
 
 document.querySelectorAll('.diff-btn').forEach(btn => {
@@ -79,6 +136,14 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
     const id = btn.dataset.difficulty;
     startGame(Difficulty[id]);
   });
+});
+
+document.getElementById('btn-menu').addEventListener('click', backToMenu);
+document.getElementById('btn-restart').addEventListener('click', () => {
+  if (scene) {
+    scene.restart();
+    updateAcornCounter();
+  }
 });
 
 // ----- Service worker (offline cache) -------------------------------------

@@ -104,14 +104,19 @@ export class GameScene {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {{columns:number, rows:number, id:string}} difficulty
-   * @param {{onBackToMenu?: () => void, styleIndex?: number}} [opts]
+   * @param {{
+   *   onCollectiblesUpdate?: () => void,
+   *   styleIndex?:           number,
+   *   showCollectibles?:     boolean,
+   * }} [opts]
    */
   constructor(canvas, difficulty, opts = {}) {
     this.canvas    = canvas;
     this.ctx       = canvas.getContext('2d');
     this.diff      = difficulty;
     this.styleIdx  = opts.styleIndex ?? 0;
-    this.onBack    = opts.onBackToMenu ?? (() => {});
+    this._onColUpd = opts.onCollectiblesUpdate ?? (() => {});
+    this.showCollectibles = opts.showCollectibles ?? true;
 
     this.timed         = [];      // {x,y,t} subsampled drag points (for trail)
     this.foots         = [];      // {x,y} permanent footstep dots
@@ -237,8 +242,15 @@ export class GameScene {
   /** Drop 3 collectible acorns at random dead-end cells (cells with only
    *  one passage), excluding start and end.  Dead-ends naturally sit OFF
    *  the solution path, so the player has to detour into a wrong-looking
-   *  branch to grab them.  All three = 3-star rating in the win cinema. */
+   *  branch to grab them.  All three = 3-star rating in the win cinema.
+   *
+   *  No-op if `showCollectibles` is disabled — the array stays empty so
+   *  HUD, win-cinema rating, and pickup detection all naturally skip. */
   _placeCollectibles() {
+    if (!this.showCollectibles) {
+      this.collectibles = [];
+      return;
+    }
     const TARGET = 3;
     const candidates = [];
     for (let col = 0; col < this._gridCols; col++) {
@@ -269,6 +281,7 @@ export class GameScene {
     this.collectibles = candidates.slice(0, TARGET).map(c => ({
       col: c.col, row: c.row, picked: false, pickedAt: 0,
     }));
+    this._onColUpd();
   }
 
   async _buildMaze() {
@@ -569,36 +582,9 @@ export class GameScene {
       ctx.restore();
     }
 
-    // Menu button — always full opacity so the user can bail out anytime,
-    // even mid-celebration.
-    ctx.fillStyle    = this.style.wallColor;
-    ctx.font         = '600 22px -apple-system, system-ui, sans-serif';
-    ctx.textBaseline = 'middle';
-    ctx.textAlign    = 'left';
-    ctx.fillText('← Menu', 32, this._headerTop + HEADER_HEIGHT / 2);
-
-    // Collectible counter — 3 acorns in the top-right of the header band.
-    // Picked = full colour, unpicked = dimmed.  Hidden during the win
-    // cinema since the centre rating row takes that role.
-    if (this.collectibles.length > 0 && !this._winFlash) {
-      const total      = this.collectibles.length;
-      const cy         = this._headerTop + HEADER_HEIGHT / 2;
-      const counterFs  = 28;
-      const spacing    = 34;
-      const rightEdge  = this.size.w - 24;
-      ctx.font         = `${counterFs}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
-      ctx.textAlign    = 'center';
-      ctx.textBaseline = 'middle';
-      const cm = ctx.measureText(COLLECTIBLE_EMOJI);
-      const cyOffset = (cm.actualBoundingBoxAscent - cm.actualBoundingBoxDescent) / 2;
-      for (let i = 0; i < total; i++) {
-        const x = rightEdge - (total - 1 - i) * spacing;
-        ctx.globalAlpha = this.collectibles[i].picked ? 1 : 0.30;
-        ctx.fillStyle = this.style.wallColor;
-        ctx.fillText(COLLECTIBLE_EMOJI, x, cy + cyOffset);
-      }
-      ctx.globalAlpha = 1;
-    }
+    // (Menu button + acorn HUD are HTML elements now — see #game-topbar
+    // in index.html and the CSS layer.  Canvas only renders the play
+    // surface, the win cinema, and the static markers/collectibles.)
 
     // Win flash — 🎉 + acorn rating.  Begins AFTER the walking animal
     // arrives at the goal, not at win time.
@@ -883,12 +869,9 @@ export class GameScene {
       ev.preventDefault();
       c.setPointerCapture(ev.pointerId);
       const p = toScene(ev);
-      // Menu button hit-test — entire reserved header strip (plus the
-      // safe-area band above it) is tappable on the left side.
-      if (p.x < 160 && p.y < this._headerBot) {
-        this.onBack();
-        return;
-      }
+      // (Top-bar buttons are HTML elements with their own click handlers
+      // and z-index above the canvas, so taps on them never reach this
+      // pointerdown listener.  Canvas just handles cell hits.)
       const cell = this._cellAt(p);
       if (!cell) return;
       if (this.currentCell && this._cellsEqual(cell, this.currentCell)) {
@@ -917,6 +900,7 @@ export class GameScene {
             r.cell.col === c.col && r.cell.row === c.row) {
           c.picked   = true;
           c.pickedAt = performance.now();
+          this._onColUpd();
         }
       }
 
@@ -953,6 +937,35 @@ export class GameScene {
     // cadence this gives the trail a faintly alive sparkle.
     this._emitParticle(p.x, p.y);
     this._emitParticle(p.x, p.y);
+  }
+
+  // ----- Public API for HTML chrome -----
+
+  /** Regenerate the maze with the SAME difficulty + same theme, resetting
+   *  trail/footsteps/particles/win-state.  Triggered by the top-bar ↻. */
+  restart() {
+    this.foots         = [];
+    this.lastFoot      = null;
+    this.particles     = [];
+    this.timed         = [];
+    this.currentCell   = null;
+    this.cursor        = { visible: false, x: 0, y: 0 };
+    this._winFlash     = null;
+    this.isDrawing     = false;
+    this._buildMaze();
+  }
+
+  /** Toggle collectibles on/off mid-game.  Turning ON places acorns into
+   *  the current maze if it has none yet; turning OFF clears them.
+   *  Notifies the HTML HUD via the onCollectiblesUpdate callback. */
+  setShowCollectibles(show) {
+    this.showCollectibles = show;
+    if (show && this.maze && this.collectibles.length === 0) {
+      this._placeCollectibles();           // also fires _onColUpd
+    } else if (!show) {
+      this.collectibles = [];
+      this._onColUpd();
+    }
   }
 
   // ----- Win -----
