@@ -266,30 +266,13 @@ canvas#game {
 .topbar-btn:hover  { background: #ede2c2; }
 .topbar-btn:active { transform: translateY(2px); box-shadow: 0 0 0 #2c1d0a; }
 
-/* Center column = title row + acorn HUD row, stacked. */
+/* Centre column hosts the acorn HUD pill (no title). */
 .topbar-center {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-width: 0;        /* let title truncate before pushing actions out */
-}
-
-.topbar-title {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #f4ead0;
-  text-transform: uppercase;
-  user-select: none;
-  -webkit-user-select: none;
-  pointer-events: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  min-width: 0;
 }
 
 .topbar-actions {
@@ -297,17 +280,24 @@ canvas#game {
   gap: 6px;
 }
 
-/* Acorn HUD — inside the top bar's centre column, just under the title.
-   Lives in chrome (HTML), so the maze can never overlap it. */
+/* Cream pill so the acorns sit on a bright background instead of the
+   dark wood bar where they otherwise disappear. */
 .acorn-counter {
-  display: flex;
-  gap: 4px;
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: #f4ead0;
+  border: 2px solid #2c1d0a;
+  border-radius: 22px;
+  box-shadow: 0 2px 0 #2c1d0a;
+  font-size: 22px;
+  line-height: 1;
   pointer-events: none;
 }
 .acorn-counter.hidden { display: none; }
 .acorn-counter .acorn { transition: opacity 0.18s ease; }
-.acorn-counter .acorn.dim { opacity: 0.35; }
+.acorn-counter .acorn.dim { opacity: 0.30; }
 
 /* ---- Win modal ---------------------------------------------------------- */
 

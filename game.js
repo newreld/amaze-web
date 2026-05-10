@@ -7,7 +7,9 @@ import { Maze, LevelStyles, Direction } from './maze.js';
 // "Reference" values tuned for iPad-sized cells (~56 px).  Actual per-frame
 // values are derived from cellSize in _buildLayout so smaller mobile cells
 // get proportionally thinner walls and a smaller cursor head.
-const REF_WALL_WIDTH    = 14;
+// REF_WALL_WIDTH bumped to 18 so the painted bark reads with more
+// presence at every difficulty (was 14 — felt thin on hard mazes).
+const REF_WALL_WIDTH    = 18;
 const REF_HEAD_RADIUS   = 14;
 const REF_CELL_SIZE     = 56;     // wallW/headR hit their cap at this cellSize
 const TRAIL_DURATION_MS = 2500;

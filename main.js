@@ -7,7 +7,6 @@ const canvas        = document.getElementById('game');
 const menu          = document.getElementById('menu');
 const installEl     = document.getElementById('install-hint');
 const topbar        = document.getElementById('game-topbar');
-const topbarTitle   = document.getElementById('topbar-title');
 const acornCounter  = document.getElementById('acorn-counter');
 const winModal      = document.getElementById('win-modal');
 const winAcorns     = document.getElementById('win-acorns');
@@ -127,7 +126,6 @@ function backToMenu() {
 function startGame(difficulty, styleIndex = 0) {
   menu.classList.add('hidden');
   topbar.classList.remove('hidden');
-  topbarTitle.textContent = `AMAZE · ${difficulty.id.toUpperCase()}`;
   scene = new GameScene(canvas, difficulty, {
     styleIndex,
     showCollectibles:     settings.collectibles,
