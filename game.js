@@ -13,6 +13,8 @@ const REF_CELL_SIZE     = 56;     // wallW/headR hit their cap at this cellSize
 const TRAIL_DURATION_MS = 2500;
 const SUBSAMPLE_DIST    = 5;
 const MAX_FOOTSTEPS     = 800;    // bumped — denser dotted trail = more dots
+// FIFO-evicted; long fast drags would otherwise grow without bound.
+const MAX_PARTICLES     = 240;
 
 // Picked once per maze for the start-cell marker.  Forest-themed so it
 // matches the painterly bark/leaf vibe.
@@ -116,6 +118,8 @@ export class GameScene {
     this.lastFoot      = null;
     this.cursor        = { visible: false, x: 0, y: 0 };
     this.collectibles  = [];      // {col, row, picked, pickedAt}
+    this.particles     = [];      // {x,y,vx,vy,life,maxLife,r}
+    this._lastTick     = 0;       // ms timestamp from previous frame, for dt
 
     this.currentCell  = null;
     this.lastResolved = { x: 0, y: 0 };
@@ -269,10 +273,12 @@ export class GameScene {
 
   async _buildMaze() {
     this._pickEndpoints();
-    this._placeCollectibles();
     const columns = this._gridCols;
     const rows    = this._gridRows;
     this.maze = new Maze(columns, rows);
+    // Collectibles need this.maze for dead-end detection — place them
+    // AFTER the maze graph exists, not before.
+    this._placeCollectibles();
 
     // One offscreen canvas with all walls baked in (analog of SpriteKit's
     // single sprite-from-bitmap).  Game loop just blits it each frame.
@@ -379,10 +385,46 @@ export class GameScene {
 
   _tick = (now) => {
     if (!this._alive) return;
+    // dt in seconds since the last frame, capped at 50 ms to avoid big
+    // jumps when the tab was backgrounded.
+    const dt = this._lastTick ? Math.min(0.05, (now - this._lastTick) / 1000) : 0;
+    this._lastTick = now;
     this._expirePoints(now);
+    this._updateParticles(dt);
     this._draw(now);
     this._rafId = requestAnimationFrame(this._tick);
   };
+
+  _updateParticles(dt) {
+    if (dt === 0 || this.particles.length === 0) return;
+    for (const p of this.particles) {
+      p.x   += p.vx * dt;
+      p.y   += p.vy * dt;
+      p.vy  += 70 * dt;        // gentle gravity so they settle downward
+      p.life -= dt;
+    }
+    // Drop any that have aged out.  Cheap because particles only grow
+    // during active drag and decay rapidly.
+    this.particles = this.particles.filter(p => p.life > 0);
+  }
+
+  _emitParticle(x, y) {
+    if (this.particles.length >= MAX_PARTICLES) {
+      this.particles.shift();   // FIFO eviction
+    }
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 30 + Math.random() * 70;
+    const life  = 0.6 + Math.random() * 0.5;
+    this.particles.push({
+      x: x + (Math.random() - 0.5) * 4,
+      y: y + (Math.random() - 0.5) * 4,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 35,   // slight upward bias
+      life,
+      maxLife: life,
+      r: 1 + Math.random() * 1.8,
+    });
+  }
 
   _expirePoints(now) {
     const cutoff = now - TRAIL_DURATION_MS;
@@ -444,8 +486,8 @@ export class GameScene {
       }
 
       // Markers — start/end cells randomized per maze (see _pickEndpoints)
-      this._drawMarker(this.startCell.col, this.startCell.row, /*isStart*/ true);
-      this._drawMarker(this.endCell.col,   this.endCell.row,   /*isStart*/ false);
+      this._drawMarker(this.startCell.col, this.startCell.row, /*isStart*/ true,  now);
+      this._drawMarker(this.endCell.col,   this.endCell.row,   /*isStart*/ false, now);
 
       // Collectibles between markers and trail so the trail paints over
       // them when the cursor passes through.
@@ -465,6 +507,20 @@ export class GameScene {
           ctx.lineTo(this.timed[i + 1].x, this.timed[i + 1].y);
           ctx.stroke();
         }
+      }
+
+      // Particles — small drifting motes spawned at the cursor.  Drawn
+      // between the trail and the cursor so they read as "rising off"
+      // the freshly-laid path.  Fade with their remaining life.
+      if (this.particles.length > 0) {
+        ctx.fillStyle = this.style.trailColor;
+        for (const pt of this.particles) {
+          ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
       }
 
       // Cursor head
@@ -573,38 +629,42 @@ export class GameScene {
     ctx.restore();
   }
 
-  _drawMarker(col, row, isStart) {
+  _drawMarker(col, row, isStart, now) {
     const { ctx } = this;
     const center  = this._cellCenter(col, row);
     const r       = this.cellSize * 0.40;        // marker disc radius
 
-    // Solid filled disc — no outline.  A soft wood-tinted token on the
-    // parchment so the marker reads as part of the scene rather than as
-    // something stroked on top.
+    // Idle "breathing" for the start animal — gentle sin-based scale
+    // around 1.0 so the maze doesn't feel static while the player thinks.
+    // Drawn around the WHOLE token (disc + emoji) so the breathing reads
+    // as the animal moving, not the disc growing under a static glyph.
+    let breathe = 1;
+    if (isStart) breathe = 1 + Math.sin(now * 0.0025) * 0.04;
+
+    ctx.save();
+    ctx.translate(center.x, center.y);
+    if (breathe !== 1) ctx.scale(breathe, breathe);
+
+    // Solid filled disc — no outline.
     ctx.beginPath();
-    ctx.arc(center.x, center.y, r, 0, Math.PI * 2);
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fillStyle = this._withAlpha(this.style.wallColor, 0.18);
     ctx.fill();
 
-    // Inner emoji — sized to fill the disc generously and centred properly.
-    // Different emoji glyphs have different baselines (a flag is mostly
-    // upper-half + thin pole; a turtle is more body-heavy in the lower
-    // portion).  A fixed nudge can't centre all of them, so use
-    // `measureText().actualBoundingBox*` to find each glyph's true
-    // visual centre and offset accordingly.
+    // Inner emoji — sized to fill the disc generously and centred via
+    // measureText so each glyph's individual em-box asymmetry is
+    // compensated for.
     const emoji    = isStart ? this.startEmoji : '🏁';
     const fontSize = Math.max(20, r * 1.55);
     ctx.font         = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'alphabetic';
-    // Reset fillStyle so any monochrome emoji fallback stays readable.
     ctx.fillStyle    = this.style.wallColor;
-    const m = ctx.measureText(emoji);
-    // Vertical: glyph extends from y - ascent to y + descent in canvas
-    // (Y-down) coords.  Offset places the glyph's visual midpoint on
-    // center.y regardless of the emoji's internal asymmetry.
+    const m       = ctx.measureText(emoji);
     const yOffset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
-    ctx.fillText(emoji, center.x, center.y + yOffset);
+    ctx.fillText(emoji, 0, yOffset);
+
+    ctx.restore();
   }
 
   /** Render the maze's 3 collectibles.  Unpicked items pulse softly; a
@@ -849,6 +909,11 @@ export class GameScene {
     if (last && Math.hypot(p.x - last.x, p.y - last.y) < SUBSAMPLE_DIST) return;
     this.timed.push({ x: p.x, y: p.y, t: time });
     this.cursor = { visible: true, x: p.x, y: p.y };
+    // Each accepted sample spawns a couple of particles at the cursor.
+    // They drift outward and fade — combined with the SUBSAMPLE_DIST
+    // cadence this gives the trail a faintly alive sparkle.
+    this._emitParticle(p.x, p.y);
+    this._emitParticle(p.x, p.y);
   }
 
   // ----- Win -----
@@ -863,6 +928,7 @@ export class GameScene {
     this.styleIdx += 1;
     this.foots = [];
     this.lastFoot = null;
+    this.particles = [];
     this.currentCell = null;
     this.cursor = { visible: false, x: 0, y: 0 };
     this._applyGlobalTheme();
