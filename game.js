@@ -1,7 +1,7 @@
 // AMAZE — game scene: sprite-based maze rendering, drag input, trail, win.
 // Mirrors GameScene.swift.
 
-import { Maze, LevelStyles } from './maze.js';
+import { Maze, LevelStyles, Direction } from './maze.js';
 
 // ---- tunables (mirror Swift constants) ------------------------------------
 // "Reference" values tuned for iPad-sized cells (~56 px).  Actual per-frame
@@ -461,12 +461,16 @@ export class GameScene {
 
     // During the win flash, fade the maze + footsteps + markers + trail
     // + cursor as a group, leaving the background and the 🎉 emoji alone.
-    // The fade completes well before the emoji finishes, so the user sees
-    // a clean celebration on top of an empty canvas.
+    // The fade is delayed until AFTER the walking-animal animation
+    // completes — otherwise the animal would be walking a fading maze.
     let mazeAlpha = 1;
     if (this._winFlash) {
-      const e = now - this._winFlash.start;
-      mazeAlpha = Math.max(0, 1 - e / 600);
+      const e        = now - this._winFlash.start;
+      const fadeStart = this._winFlash.walkDur + 400;   // a beat after arrival
+      const fadeDur   = 500;
+      if (e >= fadeStart) {
+        mazeAlpha = Math.max(0, 1 - (e - fadeStart) / fadeDur);
+      }
     }
 
     if (mazeAlpha > 0) {
@@ -485,13 +489,19 @@ export class GameScene {
         ctx.fill();
       }
 
-      // Markers — start/end cells randomized per maze (see _pickEndpoints)
-      this._drawMarker(this.startCell.col, this.startCell.row, /*isStart*/ true,  now);
-      this._drawMarker(this.endCell.col,   this.endCell.row,   /*isStart*/ false, now);
+      // Markers — during the win cinema the start animal becomes the
+      // walking animal (drawn separately below), so hide the static
+      // start marker.  End flag stays put as the destination.
+      if (!this._winFlash) {
+        this._drawMarker(this.startCell.col, this.startCell.row, /*isStart*/ true, now);
+      }
+      this._drawMarker(this.endCell.col, this.endCell.row, /*isStart*/ false, now);
 
-      // Collectibles between markers and trail so the trail paints over
-      // them when the cursor passes through.
-      this._drawCollectibles(now);
+      // Collectibles — hidden during the cinema (already picked or
+      // missed; the rating row is the post-walk reveal).
+      if (!this._winFlash) {
+        this._drawCollectibles(now);
+      }
 
       // Trail — segments thickening toward the head, fading at the tail.
       // Max thickness clearly thinner than the cursor head so the head
@@ -526,8 +536,9 @@ export class GameScene {
         ctx.globalAlpha = 1;
       }
 
-      // Cursor head
-      if (this.cursor.visible) {
+      // Cursor head — hidden during the win cinema (the player isn't
+      // drawing anymore; the walking animal takes over as the focus).
+      if (this.cursor.visible && !this._winFlash) {
         ctx.fillStyle   = this.style.trailColor;
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth   = 2;
@@ -535,6 +546,24 @@ export class GameScene {
         ctx.arc(this.cursor.x, this.cursor.y, this._headR, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+      }
+
+      // Walking animal during the win cinema — eased traversal of the
+      // BFS solution path with a small step-rhythm bob.  Drawn last so
+      // it sits on top of the maze + trail + footsteps.
+      if (this._winFlash) {
+        const wf  = this._winFlash;
+        const e   = now - wf.start;
+        const raw = Math.min(1, e / wf.walkDur);
+        // ease-in-out cubic — eases out of start, eases into goal
+        const t   = raw < 0.5
+                  ? 4 * raw * raw * raw
+                  : 1 - Math.pow(-2 * raw + 2, 3) / 2;
+        if (wf.points.length > 0) {
+          const pos = this._pointAtArcLength(wf.points, wf.lengths, t * wf.totalLen);
+          const stepBob = Math.sin(now * 0.015) * 2;
+          this._drawTokenAt(pos, this.startEmoji, { bob: stepBob });
+        }
       }
 
       ctx.restore();
@@ -549,9 +578,9 @@ export class GameScene {
     ctx.fillText('← Menu', 32, this._headerTop + HEADER_HEIGHT / 2);
 
     // Collectible counter — 3 acorns in the top-right of the header band.
-    // Picked = full colour, unpicked = dimmed.  Drawn outside the maze-fade
-    // group so the counter stays visible during the win cinema too.
-    if (this.collectibles.length > 0) {
+    // Picked = full colour, unpicked = dimmed.  Hidden during the win
+    // cinema since the centre rating row takes that role.
+    if (this.collectibles.length > 0 && !this._winFlash) {
       const total      = this.collectibles.length;
       const cy         = this._headerTop + HEADER_HEIGHT / 2;
       const counterFs  = 28;
@@ -571,20 +600,23 @@ export class GameScene {
       ctx.globalAlpha = 1;
     }
 
-    // Win flash — 🎉 emoji + collectible-rating stars on top of the
-    // now-faded maze.
+    // Win flash — 🎉 + acorn rating.  Begins AFTER the walking animal
+    // arrives at the goal, not at win time.
     if (this._winFlash) {
-      const elapsed = now - this._winFlash.start;
-      const total   = 2200;
-      if (elapsed >= total) {
+      const wf      = this._winFlash;
+      const elapsed = now - wf.start;
+      if (elapsed >= wf.end) {
         this._winFlash = null;
         this._restartAfterWin();
-      } else {
-        const fadeIn  = Math.min(elapsed / 200, 1);
-        const fadeOut = elapsed > total - 300
-                        ? Math.max(0, 1 - (elapsed - (total - 300)) / 300)
-                        : 1;
-        const scale     = 0.5 + 0.5 * Math.min(elapsed / 200, 1);
+      } else if (elapsed >= wf.walkDur) {
+        // Celebration phase, time-shifted to start at walkDur.
+        const ce        = elapsed - wf.walkDur;
+        const ceTotal   = wf.end - wf.walkDur;
+        const fadeIn    = Math.min(ce / 200, 1);
+        const fadeOut   = ce > ceTotal - 300
+                          ? Math.max(0, 1 - (ce - (ceTotal - 300)) / 300)
+                          : 1;
+        const scale     = 0.5 + 0.5 * Math.min(ce / 200, 1);
         const baseAlpha = fadeIn * fadeOut;
         const earned    = this.collectibles.filter(c => c.picked).length;
         const totalCol  = this.collectibles.length;
@@ -614,7 +646,7 @@ export class GameScene {
             const isEarned = i < earned;
             const x        = (i - (totalCol - 1) / 2) * spacing;
             const popT     = Math.min(1, Math.max(0,
-              (elapsed - (popDelay + i * popStep)) / popDur));
+              (ce - (popDelay + i * popStep)) / popDur));
             const popScale = isEarned ? 0.4 + popT * 0.6 : 0.5 + popT * 0.5;
             const alpha    = isEarned ? baseAlpha * popT
                                       : baseAlpha * popT * 0.30;
@@ -634,23 +666,26 @@ export class GameScene {
   }
 
   _drawMarker(col, row, isStart, now) {
-    const { ctx } = this;
-    const center  = this._cellCenter(col, row);
-    const r       = this.cellSize * 0.40;        // marker disc radius
-
-    // Idle motion for the start animal — gentle vertical bob of ±2 px
-    // over a ~2.6 s period.  Translate-only (no scale) so the emoji
-    // glyph isn't re-rasterized at fractional sizes each frame, which
-    // produced visible jitter.  Stops as soon as the player records
-    // their first trail point so the animal "freezes alert" once
-    // gameplay begins.
-    let bobY = 0;
+    const center = this._cellCenter(col, row);
+    // Idle vertical bob (±2 px over ~2.6 s) for the start animal until
+    // the player records their first trail point.  End flag is static.
+    let bob = 0;
     if (isStart && this.timed.length === 0) {
-      bobY = Math.sin(now * 0.0024) * 2;
+      bob = Math.sin(now * 0.0024) * 2;
     }
+    this._drawTokenAt(center, isStart ? this.startEmoji : '🏁', { bob });
+  }
+
+  /** Renders a "marker token" — soft wood-tinted disc + centred emoji —
+   *  at an arbitrary canvas position.  Used both for the static start/
+   *  end markers and for the walking animal during the win cinema. */
+  _drawTokenAt(pos, emoji, { bob = 0 } = {}) {
+    const { ctx } = this;
+    const r        = this.cellSize * 0.40;
+    const fontSize = Math.max(20, r * 1.55);
 
     ctx.save();
-    ctx.translate(center.x, center.y + bobY);
+    ctx.translate(pos.x, pos.y + bob);
 
     // Solid filled disc — no outline.
     ctx.beginPath();
@@ -658,11 +693,8 @@ export class GameScene {
     ctx.fillStyle = this._withAlpha(this.style.wallColor, 0.18);
     ctx.fill();
 
-    // Inner emoji — sized to fill the disc generously and centred via
-    // measureText so each glyph's individual em-box asymmetry is
-    // compensated for.
-    const emoji    = isStart ? this.startEmoji : '🏁';
-    const fontSize = Math.max(20, r * 1.55);
+    // Inner emoji — measureText keeps each glyph's visual midpoint on the
+    // disc centre regardless of the emoji's internal em-box asymmetry.
     ctx.font         = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'alphabetic';
@@ -928,7 +960,94 @@ export class GameScene {
   _handleWin() {
     this.isDrawing = false;
     this.timed = [];
-    this._winFlash = { start: performance.now() };
+
+    // Solve the maze once and cache an arc-length-parameterised polyline
+    // so the win cinema can walk the start animal along it cleanly.
+    const cellPath = this._bfsSolution();
+    const points   = cellPath.length > 0
+      ? cellPath.map(c => this._cellCenter(c.col, c.row))
+      // Defensive fallback (mazes are always connected, so this path is
+      // unreachable in practice) — still produces a valid 2-point line.
+      : [this._cellCenter(this.startCell.col, this.startCell.row),
+         this._cellCenter(this.endCell.col,   this.endCell.row)];
+
+    const lengths = [0];
+    let total = 0;
+    for (let i = 1; i < points.length; i++) {
+      total += Math.hypot(points[i].x - points[i - 1].x,
+                          points[i].y - points[i - 1].y);
+      lengths.push(total);
+    }
+
+    // Walk pace: ~30 ms per cell, clamped 800–2500 ms.  Short mazes
+    // animate snappily, hard mazes don't drag forever.
+    const walkDur = Math.max(800, Math.min(2500, points.length * 30));
+
+    this._winFlash = {
+      start: performance.now(),
+      points, lengths,
+      totalLen: total,
+      walkDur,
+      end: walkDur + 1700,         // 1.7 s celebration after the walk
+    };
+  }
+
+  /** Breadth-first search for the (unique) path from start to end through
+   *  the maze graph.  Returns an array of {col,row} from start to end
+   *  inclusive.  Empty array if the cells are somehow not connected
+   *  (shouldn't happen — mazes are spanning trees). */
+  _bfsSolution() {
+    const sk = `${this.startCell.col},${this.startCell.row}`;
+    const queue   = [{ col: this.startCell.col, row: this.startCell.row }];
+    const parent  = new Map();
+    const visited = new Set([sk]);
+
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      const ck  = `${cur.col},${cur.row}`;
+      if (cur.col === this.endCell.col && cur.row === this.endCell.row) {
+        const path = [cur];
+        let k = ck;
+        while (parent.has(k)) {
+          k = parent.get(k);
+          const [c, r] = k.split(',').map(Number);
+          path.unshift({ col: c, row: r });
+        }
+        return path;
+      }
+      for (const dirName of ['top', 'right', 'bottom', 'left']) {
+        if (!this.maze.hasPassage(cur.col, cur.row, dirName)) continue;
+        const off = Direction[dirName];
+        const nc  = cur.col + off.dc;
+        const nr  = cur.row + off.dr;
+        const nk  = `${nc},${nr}`;
+        if (visited.has(nk)) continue;
+        visited.add(nk);
+        parent.set(nk, ck);
+        queue.push({ col: nc, row: nr });
+      }
+    }
+    return [];
+  }
+
+  /** Linearly interpolate a position at arc-length `s` along the polyline
+   *  defined by `points` and the cumulative `lengths`. */
+  _pointAtArcLength(points, lengths, s) {
+    if (points.length <= 1) return points[0] ?? { x: 0, y: 0 };
+    if (s <= 0)             return points[0];
+    const total = lengths[lengths.length - 1];
+    if (s >= total)         return points[points.length - 1];
+    for (let i = 0; i < points.length - 1; i++) {
+      if (s <= lengths[i + 1]) {
+        const segLen = lengths[i + 1] - lengths[i];
+        const t = segLen > 0 ? (s - lengths[i]) / segLen : 0;
+        return {
+          x: points[i].x + (points[i + 1].x - points[i].x) * t,
+          y: points[i].y + (points[i + 1].y - points[i].y) * t,
+        };
+      }
+    }
+    return points[points.length - 1];
   }
 
   _restartAfterWin() {
