@@ -72,6 +72,25 @@ canvas#game {
   pointer-events: none;
 }
 
+/* Sun illustration — only on the difficulty menu (not in-game).  Bright
+   warm disc with a soft glow halo, anchored to the upper-right corner.
+   Sized in viewport units so it scales sensibly on phones + tablets. */
+#menu .sun {
+  position: absolute;
+  top: clamp(20px, 6vh, 60px);
+  right: clamp(20px, 6vw, 80px);
+  width:  clamp(80px, 12vw, 130px);
+  height: clamp(80px, 12vw, 130px);
+  background: radial-gradient(circle, #fffadc 0%, #ffd66e 55%, #f0a830 100%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 36px 8px rgba(255, 224, 130, 0.55),
+    0 0 80px 20px rgba(255, 200, 80, 0.30);
+  pointer-events: none;
+  /* Sits behind everything else by virtue of DOM order — first child of
+     the flex overlay, with no z-index of its own. */
+}
+
 /* Paper card with corner rivets that holds the difficulty selector. */
 .menu-frame {
   position: relative;

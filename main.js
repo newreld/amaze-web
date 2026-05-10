@@ -150,10 +150,13 @@ function backToMenu() {
   applyTheme(MENU_THEME);
 }
 
-function startGame(difficulty, styleIndex = 0) {
+function startGame(difficulty, styleIndex) {
   menu.classList.add('hidden');
   topbar.classList.remove('hidden');
   scene = new GameScene(canvas, difficulty, {
+    // Pass through the optional styleIndex (used by the resize handler
+    // to preserve the theme across rotations).  When undefined,
+    // GameScene picks a random theme — fresh starts from the menu.
     styleIndex,
     showCollectibles:     settings.collectibles,
     onCollectiblesUpdate: updateAcornCounter,

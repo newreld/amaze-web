@@ -121,7 +121,10 @@ export class GameScene {
     this.canvas         = canvas;
     this.ctx            = canvas.getContext('2d');
     this.diff           = difficulty;
-    this.styleIdx       = opts.styleIndex ?? 0;
+    // If the caller doesn't pin a theme, pick one at random so each new
+    // game starts on a different palette.  Re-randomised on restart()
+    // and nextMaze() too.
+    this.styleIdx       = opts.styleIndex ?? (Math.random() * LevelStyles.length) | 0;
     this._onColUpd      = opts.onCollectiblesUpdate ?? (() => {});
     this._onThemeChange = opts.onThemeChange         ?? (() => {});
     this._onWin         = opts.onWin                 ?? (() => {});
@@ -888,9 +891,11 @@ export class GameScene {
 
   // ----- Public API for HTML chrome -----
 
-  /** Regenerate the maze with the SAME difficulty + same theme, resetting
-   *  trail/footsteps/particles/win-state.  Triggered by the top-bar ↻. */
+  /** Regenerate the maze with the SAME difficulty but a NEW random theme,
+   *  resetting trail/footsteps/particles/win-state.  Triggered by the
+   *  top-bar ↻. */
   restart() {
+    this.styleIdx      = this._pickRandomTheme();
     this.foots         = [];
     this.lastFoot      = null;
     this.particles     = [];
@@ -899,13 +904,25 @@ export class GameScene {
     this.cursor        = { visible: false, x: 0, y: 0 };
     this._winFlash     = null;
     this.isDrawing     = false;
+    this._onThemeChange(this.style);
     this._buildMaze();
   }
 
-  /** Cycle to the next theme and build a new maze.  Triggered by the
-   *  win-modal "Again ▶" button. */
+  /** Pick a random theme index that differs from the current one (when
+   *  possible), so consecutive mazes always feel like a different palette. */
+  _pickRandomTheme() {
+    if (LevelStyles.length <= 1) return 0;
+    let idx;
+    do {
+      idx = (Math.random() * LevelStyles.length) | 0;
+    } while (idx === this.styleIdx);
+    return idx;
+  }
+
+  /** Cycle to a new (random) theme and build a new maze.  Triggered by
+   *  the win-modal "Again ▶" button. */
   nextMaze() {
-    this.styleIdx += 1;
+    this.styleIdx = this._pickRandomTheme();
     this.foots         = [];
     this.lastFoot      = null;
     this.particles     = [];
