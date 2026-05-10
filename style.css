@@ -119,73 +119,169 @@ canvas#game {
 }
 
 /* ---- In-game top bar ----------------------------------------------------- */
-/* Sits on top of the canvas at safe-area-top with the same height as the
-   canvas's reserved header band, so the maze stays visually below it.  The
-   bar absorbs pointer events in its area; the canvas keeps full pointer
-   reception below. */
+/* Solid wood bar across the top.  Background extends behind the iOS
+   safe-area-top so the OS clock sits on bark; content (buttons + title)
+   is pushed below the safe area via padding-top. */
 
 #game-topbar {
   position: fixed;
-  top: var(--safe-top, 0px);
+  top: 0;
   left: 0;
   right: 0;
-  height: 72px;
+  height: calc(72px + var(--safe-top, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
-  z-index: 8;
+  padding: var(--safe-top, 0px) 14px 0 14px;
+  background: linear-gradient(180deg, #5b3a1c 0%, #4a2e15 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.30);
+  z-index: 10;
 }
 #game-topbar.hidden { display: none; }
 
 .topbar-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: 0;
-  border-radius: 8px;
-  padding: 10px 14px;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: #f4ead0;
+  border: 2px solid #2c1d0a;
+  border-radius: 12px;
+  padding: 0;
   font-family: inherit;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 600;
-  color: var(--wall);
+  color: #2c1d0a;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s ease;
+  box-shadow: 0 2px 0 #2c1d0a;
+  transition: transform 0.05s ease, background 0.12s ease;
 }
-.topbar-btn:hover  { background: rgba(92, 59, 26, 0.10); }
-.topbar-btn:active { background: rgba(92, 59, 26, 0.20); transform: scale(0.97); }
+.topbar-btn:hover  { background: #ede2c2; }
+.topbar-btn:active { transform: translateY(2px); box-shadow: 0 0 0 #2c1d0a; }
 
-.topbar-btn .icon {
+.topbar-title {
+  flex: 1;
+  text-align: center;
   font-size: 20px;
-  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  color: #f4ead0;
+  text-transform: uppercase;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
 }
-.topbar-btn.icon-btn {
-  font-size: 22px;
-  padding: 8px 12px;
-  min-width: 44px;
+
+/* Floating acorn HUD — sits just below the top bar, right side. */
+.acorn-counter {
+  position: fixed;
+  top: calc(72px + var(--safe-top, 0px) + 12px);
+  right: 16px;
+  display: flex;
+  gap: 6px;
+  font-size: 26px;
+  z-index: 6;
+  pointer-events: none;
+  background: rgba(244, 234, 208, 0.85);
+  padding: 6px 10px;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.acorn-counter .acorn { transition: opacity 0.18s ease; }
+.acorn-counter .acorn.dim { opacity: 0.30; }
+.acorn-counter.hidden { display: none; }
+
+/* ---- Win modal ---------------------------------------------------------- */
+
+#win-modal {
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 14;
+}
+
+.win-card {
+  width: min(420px, calc(100vw - 56px));
+  background: var(--bg);
+  border: 4px solid #2c1d0a;
+  border-radius: 18px;
+  padding: 32px 28px 24px;
+  text-align: center;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.40);
+  animation: win-card-in 0.32s cubic-bezier(0.2, 0.7, 0.3, 1.2) both;
+}
+
+@keyframes win-card-in {
+  0%   { opacity: 0; transform: scale(0.86) translateY(8px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+.win-header {
+  display: inline-block;
+  background: linear-gradient(180deg, #7a4f29 0%, #5b3a1c 100%);
+  color: #f4ead0;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  padding: 14px 28px;
+  border-radius: 14px;
+  border: 3px solid #2c1d0a;
+  box-shadow: 0 4px 0 #2c1d0a, 0 8px 14px rgba(0, 0, 0, 0.20);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.win-acorns {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 22px 0 14px;
+  font-size: 36px;
+}
+.win-acorns span { transition: opacity 0.2s ease; }
+.win-acorns span.dim { opacity: 0.30; }
+
+.win-tagline {
+  color: var(--wall);
+  font-size: 16px;
+  margin: 0 0 22px;
+  line-height: 1.4;
+}
+
+.win-actions {
+  display: flex;
+  gap: 12px;
   justify-content: center;
 }
 
-.topbar-actions {
-  display: flex;
-  gap: 2px;
+.win-btn {
+  padding: 12px 26px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 2px solid #2c1d0a;
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: transform 0.05s ease;
+}
+.win-btn:active { transform: translateY(2px); box-shadow: 0 0 0 #2c1d0a; }
+
+.win-btn-primary {
+  background: linear-gradient(180deg, #7a4f29 0%, #5b3a1c 100%);
+  color: #f4ead0;
+  box-shadow: 0 3px 0 #2c1d0a;
 }
 
-.acorn-counter {
-  display: flex;
-  gap: 4px;
-  font-size: 24px;
-  pointer-events: none;
+.win-btn-secondary {
+  background: #f4ead0;
+  color: #4a2e15;
+  box-shadow: 0 3px 0 #2c1d0a;
 }
-.acorn-counter .acorn {
-  transition: opacity 0.18s ease;
-}
-.acorn-counter .acorn.dim { opacity: 0.30; }
-.acorn-counter.hidden { display: none; }
 
 /* ---- Settings overlay ---------------------------------------------------- */
 

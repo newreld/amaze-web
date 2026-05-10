@@ -7,7 +7,11 @@ const canvas        = document.getElementById('game');
 const menu          = document.getElementById('menu');
 const installEl     = document.getElementById('install-hint');
 const topbar        = document.getElementById('game-topbar');
+const topbarTitle   = document.getElementById('topbar-title');
 const acornCounter  = document.getElementById('acorn-counter');
+const winModal      = document.getElementById('win-modal');
+const winAcorns     = document.getElementById('win-acorns');
+const winTagline    = document.getElementById('win-tagline');
 const settingsOverlay  = document.getElementById('settings-overlay');
 const toggleCollectibles = document.getElementById('toggle-collectibles');
 
@@ -36,7 +40,6 @@ toggleCollectibles.addEventListener('change', () => {
 function openSettings()  { settingsOverlay.classList.remove('hidden'); }
 function closeSettings() { settingsOverlay.classList.add('hidden'); }
 
-document.getElementById('btn-settings').addEventListener('click', openSettings);
 document.getElementById('btn-menu-settings').addEventListener('click', openSettings);
 document.getElementById('btn-close-settings').addEventListener('click', closeSettings);
 // Tap the dim backdrop (anywhere outside the frame) to close as well.
@@ -115,6 +118,7 @@ function backToMenu() {
   scene = null;
   topbar.classList.add('hidden');
   acornCounter.classList.add('hidden');
+  winModal.classList.add('hidden');
   menu.classList.remove('hidden');
   applyTheme(MENU_THEME);
 }
@@ -122,11 +126,12 @@ function backToMenu() {
 function startGame(difficulty, styleIndex = 0) {
   menu.classList.add('hidden');
   topbar.classList.remove('hidden');
+  topbarTitle.textContent = `AMAZE · ${difficulty.id.toUpperCase()}`;
   scene = new GameScene(canvas, difficulty, {
     styleIndex,
-    showCollectibles:    settings.collectibles,
+    showCollectibles:     settings.collectibles,
     onCollectiblesUpdate: updateAcornCounter,
-    onBackToMenu:        backToMenu,
+    onWin:                showWinModal,
   });
   updateAcornCounter();
 }
@@ -140,10 +145,49 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
 
 document.getElementById('btn-menu').addEventListener('click', backToMenu);
 document.getElementById('btn-restart').addEventListener('click', () => {
-  if (scene) {
-    scene.restart();
-    updateAcornCounter();
+  if (!scene) return;
+  winModal.classList.add('hidden');
+  scene.restart();
+  updateAcornCounter();
+});
+
+// ----- Win modal ----------------------------------------------------------
+const WIN_TAGLINES = {
+  3: 'You navigated the woods like a pro.',
+  2: 'Almost a forest legend!',
+  1: 'Solid path-finding.',
+  0: 'You made it through. Try the acorns next time!',
+  off: 'Trail blazed.  On to the next forest!',
+};
+
+function showWinModal() {
+  if (!scene) return;
+  const cs       = scene.collectibles;
+  const earned   = cs.filter(c => c.picked).length;
+  const total    = cs.length;
+  if (total > 0) {
+    winAcorns.style.display = '';
+    winAcorns.innerHTML = cs
+      .map(c => `<span${c.picked ? '' : ' class="dim"'}>🌰</span>`)
+      .join('');
+    winTagline.textContent = WIN_TAGLINES[earned] ?? WIN_TAGLINES[0];
+  } else {
+    winAcorns.style.display = 'none';
+    winTagline.textContent = WIN_TAGLINES.off;
   }
+  winModal.classList.remove('hidden');
+}
+
+document.getElementById('btn-win-home').addEventListener('click', () => {
+  winModal.classList.add('hidden');
+  backToMenu();
+});
+
+document.getElementById('btn-win-again').addEventListener('click', () => {
+  if (!scene) return;
+  winModal.classList.add('hidden');
+  scene.nextMaze();           // cycles theme + new maze
+  updateAcornCounter();
 });
 
 // ----- Service worker (offline cache) -------------------------------------

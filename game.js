@@ -106,6 +106,7 @@ export class GameScene {
    * @param {{columns:number, rows:number, id:string}} difficulty
    * @param {{
    *   onCollectiblesUpdate?: () => void,
+   *   onWin?:                () => void,
    *   styleIndex?:           number,
    *   showCollectibles?:     boolean,
    * }} [opts]
@@ -116,6 +117,7 @@ export class GameScene {
     this.diff      = difficulty;
     this.styleIdx  = opts.styleIndex ?? 0;
     this._onColUpd = opts.onCollectiblesUpdate ?? (() => {});
+    this._onWin    = opts.onWin ?? (() => {});
     this.showCollectibles = opts.showCollectibles ?? true;
 
     this.timed         = [];      // {x,y,t} subsampled drag points (for trail)
@@ -472,19 +474,10 @@ export class GameScene {
     ctx.fillStyle = this.style.backgroundColor;
     ctx.fillRect(0, 0, w, h);
 
-    // During the win flash, fade the maze + footsteps + markers + trail
-    // + cursor as a group, leaving the background and the 🎉 emoji alone.
-    // The fade is delayed until AFTER the walking-animal animation
-    // completes — otherwise the animal would be walking a fading maze.
-    let mazeAlpha = 1;
-    if (this._winFlash) {
-      const e        = now - this._winFlash.start;
-      const fadeStart = this._winFlash.walkDur + 400;   // a beat after arrival
-      const fadeDur   = 500;
-      if (e >= fadeStart) {
-        mazeAlpha = Math.max(0, 1 - (e - fadeStart) / fadeDur);
-      }
-    }
+    // The HTML win modal's translucent backdrop dims the canvas after
+    // the cinema completes, so the canvas stays at full opacity
+    // throughout the play + walk + 🎉-burst sequence.
+    const mazeAlpha = 1;
 
     if (mazeAlpha > 0) {
       ctx.save();
@@ -593,9 +586,13 @@ export class GameScene {
       const elapsed = now - wf.start;
       if (elapsed >= wf.end) {
         this._winFlash = null;
-        this._restartAfterWin();
+        // Hand off to the HTML win modal — main.js shows it via onWin and
+        // decides what to do next (Home → menu, Again ▶ → nextMaze()).
+        this._onWin();
       } else if (elapsed >= wf.walkDur) {
-        // Celebration phase, time-shifted to start at walkDur.
+        // Celebration phase — short 🎉 burst on the canvas.  The acorn
+        // rating + Home/Again buttons are handled by the HTML win modal
+        // (shown via the onWin callback after this phase ends).
         const ce        = elapsed - wf.walkDur;
         const ceTotal   = wf.end - wf.walkDur;
         const fadeIn    = Math.min(ce / 200, 1);
@@ -604,46 +601,15 @@ export class GameScene {
                           : 1;
         const scale     = 0.5 + 0.5 * Math.min(ce / 200, 1);
         const baseAlpha = fadeIn * fadeOut;
-        const earned    = this.collectibles.filter(c => c.picked).length;
-        const totalCol  = this.collectibles.length;
 
         ctx.save();
         ctx.translate(w / 2, h / 2);
         ctx.scale(scale, scale);
         ctx.textAlign    = 'center';
         ctx.textBaseline = 'middle';
-
-        // 🎉 nudged up so the stars sit cleanly below it.
-        ctx.globalAlpha = baseAlpha;
-        ctx.font = '80px sans-serif';
-        ctx.fillText('🎉', 0, -45);
-
-        // Three acorns — earned ones full colour, missed ones dimmed.
-        // Each pops in with a small scale-up so the rating feels earned
-        // rather than instantly stamped.  Same emoji as the in-maze
-        // collectible so the visual association is direct.
-        if (totalCol > 0) {
-          ctx.font = '54px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
-          const spacing  = 70;
-          const popDelay = 350;
-          const popStep  = 200;
-          const popDur   = 220;
-          for (let i = 0; i < totalCol; i++) {
-            const isEarned = i < earned;
-            const x        = (i - (totalCol - 1) / 2) * spacing;
-            const popT     = Math.min(1, Math.max(0,
-              (ce - (popDelay + i * popStep)) / popDur));
-            const popScale = isEarned ? 0.4 + popT * 0.6 : 0.5 + popT * 0.5;
-            const alpha    = isEarned ? baseAlpha * popT
-                                      : baseAlpha * popT * 0.30;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.translate(x, 50);
-            ctx.scale(popScale, popScale);
-            ctx.fillText(COLLECTIBLE_EMOJI, 0, 0);
-            ctx.restore();
-          }
-        }
+        ctx.globalAlpha  = baseAlpha;
+        ctx.font = '96px sans-serif';
+        ctx.fillText('🎉', 0, 0);
         ctx.restore();
       }
     }
@@ -955,6 +921,22 @@ export class GameScene {
     this._buildMaze();
   }
 
+  /** Cycle to the next theme and build a new maze.  Triggered by the
+   *  win-modal "Again ▶" button. */
+  nextMaze() {
+    this.styleIdx += 1;
+    this.foots         = [];
+    this.lastFoot      = null;
+    this.particles     = [];
+    this.timed         = [];
+    this.currentCell   = null;
+    this.cursor        = { visible: false, x: 0, y: 0 };
+    this._winFlash     = null;
+    this.isDrawing     = false;
+    this._applyGlobalTheme();
+    this._buildMaze();
+  }
+
   /** Toggle collectibles on/off mid-game.  Turning ON places acorns into
    *  the current maze if it has none yet; turning OFF clears them.
    *  Notifies the HTML HUD via the onCollectiblesUpdate callback. */
@@ -1011,7 +993,9 @@ export class GameScene {
       points, lengths,
       totalLen: total,
       walkDur,
-      end: walkDur + 1700,         // 1.7 s celebration after the walk
+      // Brief 🎉 burst (~0.9 s) — the rating + Home/Again buttons live
+      // in the HTML win modal, so canvas can hand off quickly.
+      end: walkDur + 900,
     };
   }
 
@@ -1073,14 +1057,4 @@ export class GameScene {
     return points[points.length - 1];
   }
 
-  _restartAfterWin() {
-    this.styleIdx += 1;
-    this.foots = [];
-    this.lastFoot = null;
-    this.particles = [];
-    this.currentCell = null;
-    this.cursor = { visible: false, x: 0, y: 0 };
-    this._applyGlobalTheme();
-    this._buildMaze();
-  }
 }
