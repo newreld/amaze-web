@@ -27,14 +27,6 @@ function oppositeName(name) {
   return { top: 'bottom', bottom: 'top', left: 'right', right: 'left' }[name];
 }
 
-function dirNameFromOffset(dc, dr) {
-  if (dc === 0 && dr ===  1) return 'top';
-  if (dc === 0 && dr === -1) return 'bottom';
-  if (dc ===  1 && dr === 0) return 'right';
-  if (dc === -1 && dr === 0) return 'left';
-  return null;
-}
-
 export class Maze {
   constructor(columns, rows) {
     this.columns = columns;
@@ -53,45 +45,46 @@ export class Maze {
     return this.passages[col][row];
   }
 
-  // Prim's growing-tree algorithm: pick a random edge from the frontier,
-  // open the wall between visited & unvisited cells, repeat.
+  // Recursive-backtracker (depth-first) maze generation.  Produces "rivery"
+  // mazes with long winding corridors and few-but-long dead-end branches —
+  // the opposite of Prim's, which sprouts lots of short stubs everywhere.
+  // Result: solution paths that traverse most of the grid, and wrong turns
+  // that feel like real alternative routes (not "obvious dead end after
+  // 2 cells").
   _generate() {
     const { columns, rows } = this;
     const visited = Array.from({ length: columns }, () =>
       Array(rows).fill(false));
 
-    /** @type {{col:number,row:number,fromCol:number,fromRow:number}[]} */
-    const frontier = [];
+    /** @type {{col:number,row:number}[]} */
+    const stack = [{ col: 0, row: 0 }];
+    visited[0][0] = true;
 
-    const enqueue = (col, row) => {
+    while (stack.length > 0) {
+      const top = stack[stack.length - 1];
+
+      // Gather unvisited neighbours
+      const candidates = [];
       for (const name of ALL_DIRS) {
         const { dc, dr } = Direction[name];
-        const nc = col + dc, nr = row + dr;
+        const nc = top.col + dc;
+        const nr = top.row + dr;
         if (nc < 0 || nc >= columns || nr < 0 || nr >= rows) continue;
         if (visited[nc][nr]) continue;
-        frontier.push({ col: nc, row: nr, fromCol: col, fromRow: row });
+        candidates.push({ col: nc, row: nr, dirName: name });
       }
-    };
 
-    visited[0][0] = true;
-    enqueue(0, 0);
-
-    while (frontier.length > 0) {
-      const i = (Math.random() * frontier.length) | 0;
-      const e = frontier[i];
-      frontier[i] = frontier[frontier.length - 1];
-      frontier.pop();
-      if (visited[e.col][e.row]) continue;
-
-      const dc = e.col - e.fromCol;
-      const dr = e.row - e.fromRow;
-      const dirName = dirNameFromOffset(dc, dr);
-      if (dirName) {
-        this.passages[e.fromCol][e.fromRow].add(dirName);
-        this.passages[e.col][e.row].add(oppositeName(dirName));
+      if (candidates.length === 0) {
+        stack.pop();         // dead-end — backtrack
+        continue;
       }
-      visited[e.col][e.row] = true;
-      enqueue(e.col, e.row);
+
+      // Carve through a random unvisited neighbour and recurse there.
+      const next = candidates[(Math.random() * candidates.length) | 0];
+      this.passages[top.col][top.row].add(next.dirName);
+      this.passages[next.col][next.row].add(oppositeName(next.dirName));
+      visited[next.col][next.row] = true;
+      stack.push({ col: next.col, row: next.row });
     }
   }
 }
