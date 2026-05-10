@@ -600,9 +600,10 @@ export class GameScene {
         ctx.font = '80px sans-serif';
         ctx.fillText('🎉', 0, -45);
 
-        // Three stars — earned ones full colour, unearned dimmed.  Each
-        // star pops in with a small scale-up so the rating feels earned
-        // rather than instantly stamped.
+        // Three acorns — earned ones full colour, missed ones dimmed.
+        // Each pops in with a small scale-up so the rating feels earned
+        // rather than instantly stamped.  Same emoji as the in-maze
+        // collectible so the visual association is direct.
         if (totalCol > 0) {
           ctx.font = '54px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
           const spacing  = 70;
@@ -621,7 +622,7 @@ export class GameScene {
             ctx.globalAlpha = alpha;
             ctx.translate(x, 50);
             ctx.scale(popScale, popScale);
-            ctx.fillText('⭐', 0, 0);
+            ctx.fillText(COLLECTIBLE_EMOJI, 0, 0);
             ctx.restore();
           }
         }
