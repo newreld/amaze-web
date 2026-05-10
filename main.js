@@ -91,7 +91,14 @@ function themeGradient(style) {
   const base    = _parseRgb(style.backgroundColor);
   const sun     = _toRgb(_lighten(_warmShift(base, 0.32), 0.10));
   const baseStr = _toRgb(base);
-  const dark    = _toRgb(_darken(base, 0.22));
+  // Light themes (parchment cream, tan, autumn cream, fairy mint, stone)
+  // warm-shift toward orange when darkening so the bottom doesn't go
+  // grey.  Dark themes (Moonlit Grove) just darken — the warm shift
+  // would muddy the moonlit feel.
+  const baseAvg = (base[0] + base[1] + base[2]) / 3;
+  const dark    = baseAvg > 150
+    ? _toRgb(_warmShift(_darken(base, 0.20), 0.45))
+    : _toRgb(_darken(base, 0.30));
   return `
     radial-gradient(ellipse at 85% 10%, ${sun} 0%, ${baseStr} 32%, transparent 70%),
     linear-gradient(180deg, ${baseStr} 0%, ${dark} 100%)
