@@ -101,8 +101,10 @@
   <h1>AMAZE — Themes</h1>
   <p class="lead">
     All six in-game themes, in order.  The preview shows the full menu/game
-    background gradient (radial sun + linear base→dark pass).  Swatches below
-    list the raw colour roles each theme uses.
+    background — a 3-stop linear pass (top → mid → bottom) with a radial
+    glow wash layered on top.  Variation across the gradient is carried
+    mostly by hue rather than lightness.  Swatches below list the raw
+    colour roles each theme uses.
     <br><a class="back" href="index.html">← back to game</a>
   </p>
   <div class="grid" id="grid"></div>
@@ -112,18 +114,23 @@
 
     function gradient(s) {
       return `
-        radial-gradient(ellipse at 85% 10%, ${s.bgGradientSun} 0%, ${s.backgroundColor} 32%, transparent 70%),
-        linear-gradient(180deg, ${s.backgroundColor} 0%, ${s.bgGradientDark} 100%)
+        radial-gradient(ellipse 70% 55% at 82% 12%,
+          ${s.bgGradientGlow} 0%,
+          transparent 70%),
+        linear-gradient(180deg,
+          ${s.bgGradientTop} 0%,
+          ${s.backgroundColor} 50%,
+          ${s.bgGradientBottom} 100%)
       `;
     }
 
     const ROLES = [
-      ['backgroundColor', 'base'],
-      ['bgGradientSun',   'sun'],
-      ['bgGradientDark',  'dark'],
-      ['wallColor',       'wall'],
-      ['wallTint',        'tint'],
-      ['trailColor',      'trail'],
+      ['bgGradientTop',    'top'],
+      ['backgroundColor',  'mid'],
+      ['bgGradientBottom', 'bottom'],
+      ['bgGradientGlow',   'glow'],
+      ['wallColor',        'wall'],
+      ['trailColor',       'trail'],
     ];
 
     const grid = document.getElementById('grid');

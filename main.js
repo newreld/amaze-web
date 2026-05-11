@@ -61,18 +61,23 @@ function updateAcornCounter() {
 }
 
 // ----- Per-theme background gradient --------------------------------------
-// Computed from each theme's backgroundColor: lightened "sun" radial in the
-// top-right, base colour mid-tone, darker shade at the bottom of the
-// linear pass.  Reused by the menu (LevelStyles[0]) and by every maze
-// theme cycled through during gameplay.
-
-// Each LevelStyle now ships its own bgGradientSun + bgGradientDark, so
-// the gradient is just direct lookups — no per-channel computation and
-// no risk of greys creeping in for low-saturation bases.
+// Two stacked gradients for an organic feel:
+//   1. Radial overlay (on top): a soft hue wash in the top-right that
+//      fades to transparent.  Adds hue variation in one corner without
+//      lightening it dramatically — bgGradientGlow is luminance-matched
+//      to the linear's top stop, so this reads as a tint, not a sun.
+//   2. Linear base: 3-stop top → middle → bottom.  Middle is the
+//      brightest by a touch; top and bottom dip slightly.  Range is
+//      narrow (~10–12% lightness) so the gradient is mostly a hue arc.
 function themeGradient(style) {
   return `
-    radial-gradient(ellipse at 85% 10%, ${style.bgGradientSun} 0%, ${style.backgroundColor} 32%, transparent 70%),
-    linear-gradient(180deg, ${style.backgroundColor} 0%, ${style.bgGradientDark} 100%)
+    radial-gradient(ellipse 70% 55% at 82% 12%,
+      ${style.bgGradientGlow} 0%,
+      transparent 70%),
+    linear-gradient(180deg,
+      ${style.bgGradientTop} 0%,
+      ${style.backgroundColor} 50%,
+      ${style.bgGradientBottom} 100%)
   `;
 }
 
