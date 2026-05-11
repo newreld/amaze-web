@@ -97,58 +97,75 @@ export class Maze {
 const rgb  = (r, g, b)        => `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
 const rgba = (r, g, b, a)     => `rgba(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)},${a})`;
 
+// Each theme now defines its bg gradient explicitly (sun + base + dark)
+// rather than computing it from a single bg colour, so palettes stay
+// vibrant and colourful at both ends instead of fading into grey.  For
+// dark themes the sun is intentionally close in brightness to the base
+// — a soft moonlight glow rather than a stark highlight.
 export const LevelStyles = [
-  // 1. Enchanted Forest
+  // 1. Enchanted Forest — warm sunny afternoon
   {
     name: 'Enchanted Forest',
-    backgroundColor: rgb(0.94, 0.90, 0.80),
+    backgroundColor: rgb(0.96, 0.87, 0.66),    // warm cream
+    bgGradientSun:   rgb(1.00, 0.86, 0.43),    // bright gold
+    bgGradientDark:  rgb(0.85, 0.68, 0.37),    // warm tan
     wallColor:       rgb(0.36, 0.23, 0.10),
     wallTint:        rgb(0.68, 0.55, 0.40),
     trailColor:      rgb(0.24, 0.55, 0.24),
     footstepColor:   rgba(0.24, 0.55, 0.24, 0.75),
   },
-  // 2. Ancient Map
+  // 2. Ancient Map — sepia parchment dusk
   {
     name: 'Ancient Map',
-    backgroundColor: rgb(0.83, 0.71, 0.51),
+    backgroundColor: rgb(0.83, 0.71, 0.51),    // tan paper
+    bgGradientSun:   rgb(0.93, 0.78, 0.55),    // amber
+    bgGradientDark:  rgb(0.55, 0.36, 0.18),    // leather brown
     wallColor:       rgb(0.24, 0.14, 0.04),
     wallTint:        rgb(0.24, 0.14, 0.04),
     trailColor:      rgb(0.78, 0.53, 0.04),
     footstepColor:   rgba(0.78, 0.53, 0.04, 0.75),
   },
-  // 3. Moonlit Grove
+  // 3. Moonlit Grove — deep night forest (low contrast sun)
   {
     name: 'Moonlit Grove',
-    backgroundColor: rgb(0.06, 0.12, 0.06),
+    backgroundColor: rgb(0.08, 0.15, 0.22),    // night blue-green
+    bgGradientSun:   rgb(0.22, 0.34, 0.42),    // soft moonlight
+    bgGradientDark:  rgb(0.03, 0.08, 0.13),    // pitch night
     wallColor:       rgb(0.54, 0.72, 0.54),
     wallTint:        rgb(0.54, 0.72, 0.54),
     trailColor:      rgb(0.72, 1.00, 0.50),
     footstepColor:   rgba(0.72, 1.00, 0.50, 0.75),
   },
-  // 4. Autumn Trail
+  // 4. Autumn Trail — orange sunset
   {
     name: 'Autumn Trail',
-    backgroundColor: rgb(0.98, 0.92, 0.82),
+    backgroundColor: rgb(0.97, 0.78, 0.55),    // peach
+    bgGradientSun:   rgb(1.00, 0.65, 0.32),    // bright orange
+    bgGradientDark:  rgb(0.70, 0.36, 0.16),    // rust
     wallColor:       rgb(0.42, 0.18, 0.03),
     wallTint:        rgb(0.74, 0.48, 0.30),
     trailColor:      rgb(0.91, 0.38, 0.13),
     footstepColor:   rgba(0.91, 0.38, 0.13, 0.75),
   },
-  // 5. Fairy Garden
+  // 5. Fairy Garden — pastel pink + lavender
   {
     name: 'Fairy Garden',
-    backgroundColor: rgb(0.91, 0.96, 0.91),
-    wallColor:       rgb(0.18, 0.42, 0.18),
-    wallTint:        rgb(0.50, 0.68, 0.50),
+    backgroundColor: rgb(0.89, 0.78, 0.92),    // soft lilac
+    bgGradientSun:   rgb(1.00, 0.82, 0.90),    // soft pink
+    bgGradientDark:  rgb(0.65, 0.51, 0.79),    // lavender
+    wallColor:       rgb(0.42, 0.25, 0.50),
+    wallTint:        rgb(0.65, 0.45, 0.70),
     trailColor:      rgb(0.88, 0.38, 0.69),
     footstepColor:   rgba(0.88, 0.38, 0.69, 0.75),
   },
-  // 6. Stone & Moss
+  // 6. Stone & Moss — vibrant moss green
   {
     name: 'Stone & Moss',
-    backgroundColor: rgb(0.94, 0.93, 0.91),
-    wallColor:       rgb(0.31, 0.28, 0.25),
-    wallTint:        rgb(0.62, 0.59, 0.55),
+    backgroundColor: rgb(0.78, 0.84, 0.66),    // pale moss
+    bgGradientSun:   rgb(0.94, 0.96, 0.78),    // bright moss highlight
+    bgGradientDark:  rgb(0.42, 0.55, 0.30),    // deep moss
+    wallColor:       rgb(0.32, 0.40, 0.22),
+    wallTint:        rgb(0.55, 0.66, 0.42),
     trailColor:      rgb(0.00, 0.63, 0.38),
     footstepColor:   rgba(0.00, 0.63, 0.38, 0.75),
   },

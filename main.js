@@ -66,42 +66,13 @@ function updateAcornCounter() {
 // linear pass.  Reused by the menu (LevelStyles[0]) and by every maze
 // theme cycled through during gameplay.
 
-function _parseRgb(s) {
-  const m = s.match(/rgb\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)/);
-  return m ? [+m[1], +m[2], +m[3]] : [0, 0, 0];
-}
-function _toRgb(arr) {
-  return `rgb(${Math.round(arr[0])}, ${Math.round(arr[1])}, ${Math.round(arr[2])})`;
-}
-function _lighten(rgb, amount) {
-  return rgb.map(c => c + (255 - c) * amount);
-}
-function _darken(rgb, amount) {
-  return rgb.map(c => c * (1 - amount));
-}
-// Pull a colour partway toward a warm gold target — gives the sun-radial
-// a real "sunset glow" feel instead of just being a lightened version of
-// the bg (which on parchment-cream themes was barely visible).
-function _warmShift(rgb, amount) {
-  const target = [255, 215, 120];
-  return rgb.map((c, i) => c + (target[i] - c) * amount);
-}
-
+// Each LevelStyle now ships its own bgGradientSun + bgGradientDark, so
+// the gradient is just direct lookups — no per-channel computation and
+// no risk of greys creeping in for low-saturation bases.
 function themeGradient(style) {
-  const base    = _parseRgb(style.backgroundColor);
-  const sun     = _toRgb(_lighten(_warmShift(base, 0.32), 0.10));
-  const baseStr = _toRgb(base);
-  // Light themes (parchment cream, tan, autumn cream, fairy mint, stone)
-  // warm-shift toward orange when darkening so the bottom doesn't go
-  // grey.  Dark themes (Moonlit Grove) just darken — the warm shift
-  // would muddy the moonlit feel.
-  const baseAvg = (base[0] + base[1] + base[2]) / 3;
-  const dark    = baseAvg > 150
-    ? _toRgb(_warmShift(_darken(base, 0.20), 0.45))
-    : _toRgb(_darken(base, 0.30));
   return `
-    radial-gradient(ellipse at 85% 10%, ${sun} 0%, ${baseStr} 32%, transparent 70%),
-    linear-gradient(180deg, ${baseStr} 0%, ${dark} 100%)
+    radial-gradient(ellipse at 85% 10%, ${style.bgGradientSun} 0%, ${style.backgroundColor} 32%, transparent 70%),
+    linear-gradient(180deg, ${style.backgroundColor} 0%, ${style.bgGradientDark} 100%)
   `;
 }
 

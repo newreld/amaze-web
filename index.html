@@ -55,16 +55,18 @@
   <!-- Difficulty picker — paper-card design with wooden AMAZE stamp,
        leaf icons, chevrons, marketing tagline. -->
   <div id="menu" class="overlay">
-    <div class="sun" aria-hidden="true"></div>
-
     <button class="settings-pill" id="btn-menu-settings" aria-label="Settings">
       <span class="settings-pill-icon">⚙</span>
       <span class="settings-pill-label">Settings</span>
     </button>
 
     <div class="menu-frame">
+      <!-- Sun lives inside the card so it can anchor to the card's top-
+           right corner (translate-50%/-50%).  The card's top-right rivet
+           is hidden behind it. -->
+      <div class="sun" aria-hidden="true"></div>
+
       <span class="rivet rivet-tl"></span>
-      <span class="rivet rivet-tr"></span>
       <span class="rivet rivet-bl"></span>
       <span class="rivet rivet-br"></span>
 

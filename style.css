@@ -81,36 +81,24 @@ canvas#game {
   pointer-events: none;
 }
 
-/* Sun illustration — only on the difficulty menu (not in-game).
-   Anchored relative to the viewport corner: 25% from the top,
-   35% from the right.  Sized generously so it reads as a real
-   subject in the background. */
-#menu .sun {
+/* Sun illustration — anchored to the card's top-right corner, with the
+   sun's CENTRE exactly on the corner so half the disc spills outside
+   the card and half overlaps onto it like a setting sun behind the
+   poster. */
+.menu-frame .sun {
   position: absolute;
-  top: 20%;
-  right: 30%;
-  width: clamp(120px, 18vw, 240px);
-  height: clamp(120px, 18vw, 240px);
-  background: radial-gradient(circle, #fff6cf 0%, #fde9a8 60%, #f5d790 100%);
+  top: 0;
+  right: 0;
+  transform: translate(50%, -50%);
+  width:  clamp(140px, 22vw, 240px);
+  height: clamp(140px, 22vw, 240px);
+  background: radial-gradient(circle, #fff6cf 0%, #fde9a8 55%, #f5c373 100%);
   border-radius: 50%;
   box-shadow:
-    0 0 80px 24px rgba(255, 230, 140, 0.3),
-    0 0 160px 60px rgba(255, 220, 130, 0.14);
-  opacity: 0.9;
+    0 0 80px 24px rgba(255, 220, 130, 0.40),
+    0 0 160px 60px rgba(255, 200, 100, 0.18);
+  opacity: 0.95;
   pointer-events: none;
-}
-
-/* On narrow phones the menu card already eats the whole horizontal
-   space.  Push the sun back to the top-right corner there so it still
-   reads as atmosphere without overlapping the card. */
-@media (max-width: 600px) {
-  #menu .sun {
-    top: clamp(8px, 3vh, 28px);
-    right: clamp(8px, 3vw, 28px);
-    transform: none;
-    width: clamp(70px, 16vw, 110px);
-    height: clamp(70px, 16vw, 110px);
-  }
 }
 
 /* Paper card with corner rivets that holds the difficulty selector. */
@@ -546,6 +534,9 @@ canvas#game {
 
 #settings-overlay {
   z-index: 12;
+  background: rgba(0, 0, 0, 0.50);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+          backdrop-filter: blur(10px) saturate(120%);
 }
 
 .settings-frame {
