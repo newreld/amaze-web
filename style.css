@@ -97,8 +97,12 @@ canvas#game {
   box-shadow:
     0 0 80px 24px rgba(255, 220, 130, 0.40),
     0 0 160px 60px rgba(255, 200, 100, 0.18);
-  opacity: 0.95;
+  opacity: 0.9;
   pointer-events: none;
+  /* Behind the card.  menu-frame has no z-index → not a stacking
+     context → -1 places .sun beneath the card in .overlay's stack,
+     so only the half spilling outside the corner is visible. */
+  z-index: -1;
 }
 
 /* Paper card with corner rivets that holds the difficulty selector. */
