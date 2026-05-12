@@ -10,7 +10,7 @@ import { Maze, LevelStyles, Direction } from './maze.js';
 // REF_WALL_WIDTH bumped to 18 so the painted bark reads with more
 // presence at every difficulty (was 14 — felt thin on hard mazes).
 const REF_WALL_WIDTH    = 18;
-const REF_HEAD_RADIUS   = 14;
+const REF_HEAD_RADIUS   = 10;
 const REF_CELL_SIZE     = 56;     // wallW/headR hit their cap at this cellSize
 const TRAIL_DURATION_MS = 2500;
 const SUBSAMPLE_DIST    = 5;
@@ -494,7 +494,9 @@ export class GameScene {
         ctx.drawImage(this.mazeCanvas, 0, 0, w, h);
       }
 
-      // Footsteps — dense, opaque dotted trail.
+      // Footsteps — just the opaque dots.  The trail-line glow below
+      // covers the same area with a smooth blur, so layering halo discs
+      // here would stack hard-edged circles into a bumpy chain.
       ctx.fillStyle = this.style.footstepColor;
       for (const f of this.foots) {
         ctx.beginPath();
@@ -517,17 +519,38 @@ export class GameScene {
       }
 
       // Trail — segments thickening toward the head, fading at the tail.
-      // Max thickness clearly thinner than the cursor head so the head
-      // reads as a distinct marker on top of the line, not the line's
-      // bulge.
+      // Two passes:
+      //   1. Wide low-alpha stroke under a Canvas2D blur filter.  The
+      //      filter smooths the per-segment hard edges into a continuous
+      //      glow — without it, overlapping segment caps stack into a
+      //      visible chain of circles.
+      //   2. Sharp coloured line on top (no filter).
       const n = this.timed.length;
       if (n >= 2) {
-        ctx.strokeStyle = this.style.trailColor;
-        ctx.lineCap = 'round';
+        ctx.lineCap  = 'round';
+        ctx.lineJoin = 'round';
         const denom = Math.max(n - 1, 1);
+
+        // Glow pass — blurred wider stroke.
+        ctx.save();
+        ctx.filter = 'blur(5px)';
+        ctx.strokeStyle = this._withAlpha(this.style.trailColor, 0.55);
         for (let i = 0; i < n - 1; i++) {
           const t = (i + 1) / denom;
-          ctx.lineWidth = Math.max(0.5, t * this._headR * 1.2);
+          ctx.lineWidth = Math.max(2, t * this._headR * 1.8);
+          ctx.beginPath();
+          ctx.moveTo(this.timed[i].x,     this.timed[i].y);
+          ctx.lineTo(this.timed[i + 1].x, this.timed[i + 1].y);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // Sharp pass — main coloured line (slimmer than before so the
+        // glow is the dominant visual, line just defines the path).
+        ctx.strokeStyle = this.style.trailColor;
+        for (let i = 0; i < n - 1; i++) {
+          const t = (i + 1) / denom;
+          ctx.lineWidth = Math.max(0.5, t * this._headR * 0.85);
           ctx.beginPath();
           ctx.moveTo(this.timed[i].x,     this.timed[i].y);
           ctx.lineTo(this.timed[i + 1].x, this.timed[i + 1].y);
@@ -549,14 +572,29 @@ export class GameScene {
         ctx.globalAlpha = 1;
       }
 
-      // Cursor head — hidden during the win cinema (the player isn't
-      // drawing anymore; the walking animal takes over as the focus).
+      // Cursor head — smooth radial-gradient glow halo, then a sharp
+      // dot on top.  Gradient is opaque at the head edge and fades to
+      // fully transparent at the outer rim, so the halo has no hard
+      // boundary (unlike a flat fill, which would read as a disc).
       if (this.cursor.visible && !this._winFlash) {
+        const cx = this.cursor.x, cy = this.cursor.y;
+        const r       = this._headR;
+        const glowR   = r * 2.4;
+        const grad = ctx.createRadialGradient(cx, cy, r * 0.6, cx, cy, glowR);
+        grad.addColorStop(0,   this._withAlpha(this.style.trailColor, 0.55));
+        grad.addColorStop(0.55, this._withAlpha(this.style.trailColor, 0.20));
+        grad.addColorStop(1,   this._withAlpha(this.style.trailColor, 0.00));
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sharp head
         ctx.fillStyle   = this.style.trailColor;
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth   = 2;
         ctx.beginPath();
-        ctx.arc(this.cursor.x, this.cursor.y, this._headR, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
@@ -964,12 +1002,13 @@ export class GameScene {
       : [this._cellCenter(this.startCell.col, this.startCell.row),
          this._cellCenter(this.endCell.col,   this.endCell.row)];
 
-    // Final hop: lift the animal ABOVE the flag at the end so both
-    // tokens are visible.  Adds one extra path segment that goes
-    // straight up from the goal cell by ~one cell.
+    // Final lift: nudge the animal slightly above the flag so both
+    // tokens are visible without the critter looking like it's
+    // launching into orbit.  A small lift is enough to clear the flag
+    // sprite — anything larger reads as a dramatic jump.
     if (points.length >= 1) {
       const last = points[points.length - 1];
-      points.push({ x: last.x, y: last.y - this.cellSize * 0.90 });
+      points.push({ x: last.x, y: last.y - this.cellSize * 0.15 });
     }
 
     const lengths = [0];

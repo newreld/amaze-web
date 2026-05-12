@@ -180,6 +180,20 @@ const WIN_TAGLINES = {
   off: 'Trail blazed.  On to the next forest!',
 };
 
+// Forces a CSS animation to restart on an element that wasn't recreated.
+// Without this, the staged fade-in on the tagline/buttons only plays on
+// the first win — replaying the same DOM node doesn't replay animations
+// unless the animation property changes (or the element is removed and
+// reinserted).  Clearing and reading offsetWidth triggers a layout flush
+// so the empty value commits before we reapply the rule.
+function restartAnim(el) {
+  el.style.animation = 'none';
+  void el.offsetWidth;
+  el.style.animation = '';
+}
+
+const winActions = document.querySelector('.win-actions');
+
 function showWinModal() {
   if (!scene) return;
   const cs       = scene.collectibles;
@@ -187,15 +201,24 @@ function showWinModal() {
   const total    = cs.length;
   if (total > 0) {
     winAcorns.style.display = '';
-    winAcorns.innerHTML = cs
-      .map(c => `<span${c.picked ? '' : ' class="dim"'}>🌰</span>`)
-      .join('');
+    // Display order is decoupled from maze placement order: collecting
+    // any acorn fills the FIRST slot.  All three are equal.  Earned
+    // acorns are rendered first (animated), missed ones last (static
+    // dim placeholders, no pop, no halo) — the row reads "X / 3" at a
+    // glance without forcing a meaning onto position.
+    const won  = '<span>🌰</span>'.repeat(earned);
+    const lost = '<span class="dim">🌰</span>'.repeat(total - earned);
+    winAcorns.innerHTML = won + lost;
     winTagline.textContent = WIN_TAGLINES[earned] ?? WIN_TAGLINES[0];
   } else {
     winAcorns.style.display = 'none';
     winTagline.textContent = WIN_TAGLINES.off;
   }
   winModal.classList.remove('hidden');
+  // Acorn spans are recreated each call so they animate from scratch
+  // automatically.  Tagline + buttons aren't, so prod them.
+  restartAnim(winTagline);
+  restartAnim(winActions);
 }
 
 document.getElementById('btn-win-home').addEventListener('click', () => {
