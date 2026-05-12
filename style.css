@@ -271,7 +271,9 @@ canvas#game {
   box-shadow: 0 0 0 #2c1d0a;
 }
 .settings-pill-icon {
-  font-size: 18px;
+  /* SVG cog — sized inline via width/height attrs; this rule just
+     keeps it vertically aligned with the label text. */
+  display: block;
   line-height: 1;
 }
 
