@@ -559,18 +559,33 @@ export class GameScene {
           ctx.lineTo(this.timed[n - 1].x, this.timed[n - 1].y);
         }
 
-        // Glow pass — wide blurred stroke.  ctx.filter does the heavy
-        // lifting; this stroke is uniform so the blur falls off
-        // symmetrically from the centreline.
+        // Glow passes (layered) — two blurred strokes so the falloff
+        // from core to background is gradual rather than a single
+        // visible blur edge.
+        //
+        //   Outer halo: heavy blur + low alpha + wide stroke.  This is
+        //     what fades imperceptibly into the bg — a 14 px Gaussian
+        //     spreads the source alpha across ~30 px each side, so the
+        //     outermost pixels are near zero by the time they reach
+        //     anything the eye can pick up as an edge.
+        //   Inner glow: medium blur, higher alpha, narrower stroke.
+        //     Carries the saturated colour close to the line.
         ctx.save();
-        ctx.filter = 'blur(6px)';
-        ctx.strokeStyle = this._withAlpha(this.style.trailColor, 0.55);
-        ctx.lineWidth = Math.max(3, this._headR * 1.6);
+        ctx.filter = 'blur(14px)';
+        ctx.strokeStyle = this._withAlpha(this.style.trailColor, 0.35);
+        ctx.lineWidth = Math.max(5, this._headR * 2.2);
         ctx.stroke();
         ctx.restore();
 
-        // Sharp pass — coloured line over the glow.  Same path, same
-        // canvas state, just a thinner non-blurred re-stroke.
+        ctx.save();
+        ctx.filter = 'blur(5px)';
+        ctx.strokeStyle = this._withAlpha(this.style.trailColor, 0.55);
+        ctx.lineWidth = Math.max(3, this._headR * 1.3);
+        ctx.stroke();
+        ctx.restore();
+
+        // Sharp pass — crisp coloured line over the glow.  Same path,
+        // same canvas state, just a thin non-blurred re-stroke.
         ctx.strokeStyle = this.style.trailColor;
         ctx.lineWidth = Math.max(1, this._headR * 0.75);
         ctx.stroke();
