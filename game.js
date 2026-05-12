@@ -460,11 +460,14 @@ export class GameScene {
   }
 
   _maybeAddFootstep(p) {
-    if (this.foots.length >= MAX_FOOTSTEPS) return;
     if (this.lastFoot &&
         Math.hypot(p.x - this.lastFoot.x, p.y - this.lastFoot.y) < this._footSpacing) return;
     this.lastFoot = { x: p.x, y: p.y };
     this.foots.push(this.lastFoot);
+    // Rolling window: once we hit the cap, drop oldest entries so the
+    // newest footsteps keep appearing.  Array.shift is fine at this
+    // size (a handful per long-explore session — not per frame).
+    while (this.foots.length > MAX_FOOTSTEPS) this.foots.shift();
   }
 
   // ----- Rendering -----

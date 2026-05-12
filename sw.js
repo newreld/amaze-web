@@ -1,7 +1,7 @@
 // AMAZE service worker — pre-cache everything, serve cache-first.
 // Bump CACHE on every release to force fresh assets on next launch.
 
-const CACHE = "amaze-v43";
+const CACHE = "amaze-v44";
 
 const ASSETS = [
   ".",
