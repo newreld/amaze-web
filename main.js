@@ -11,21 +11,41 @@ const acornCounter  = document.getElementById('acorn-counter');
 const winModal      = document.getElementById('win-modal');
 const winAcorns     = document.getElementById('win-acorns');
 const winTagline    = document.getElementById('win-tagline');
-const settingsOverlay  = document.getElementById('settings-overlay');
-const toggleCollectibles = document.getElementById('toggle-collectibles');
+const settingsOverlay     = document.getElementById('settings-overlay');
+const toggleCollectibles  = document.getElementById('toggle-collectibles');
+const collectiblePicker   = document.getElementById('collectible-picker');
 
 let scene = null;
 
 // ----- Settings -----------------------------------------------------------
 // Persisted in localStorage so toggles survive reloads/SW updates.
 
+// Available collectible styles.  Keys are stored in localStorage so the
+// actual emoji can change later without breaking saved prefs.
+const COLLECTIBLE_GLYPHS = {
+  acorn:  '🌰',
+  star:   '⭐',
+  flower: '🌸',
+};
+
+function readCollectibleStyle() {
+  const stored = localStorage.getItem('amaze.collectibleStyle');
+  return COLLECTIBLE_GLYPHS[stored] ? stored : 'acorn';
+}
+
 const settings = {
   // Default ON — collectibles + star ratings on by default for new users.
-  collectibles: localStorage.getItem('amaze.collectibles') !== 'false',
+  collectibles:     localStorage.getItem('amaze.collectibles') !== 'false',
+  collectibleStyle: readCollectibleStyle(),
 };
 
 function saveSettings() {
-  localStorage.setItem('amaze.collectibles', String(settings.collectibles));
+  localStorage.setItem('amaze.collectibles',     String(settings.collectibles));
+  localStorage.setItem('amaze.collectibleStyle', settings.collectibleStyle);
+}
+
+function currentGlyph() {
+  return COLLECTIBLE_GLYPHS[settings.collectibleStyle] ?? '🌰';
 }
 
 toggleCollectibles.checked = settings.collectibles;
@@ -35,6 +55,24 @@ toggleCollectibles.addEventListener('change', () => {
   if (scene) scene.setShowCollectibles(settings.collectibles);
   updateAcornCounter();
 });
+
+// Style picker — segmented control.  Marks the active button, updates
+// the live scene + HUD on change.
+function syncPickerUI() {
+  for (const btn of collectiblePicker.querySelectorAll('.picker-btn')) {
+    btn.classList.toggle('active', btn.dataset.style === settings.collectibleStyle);
+  }
+}
+collectiblePicker.addEventListener('click', (ev) => {
+  const btn = ev.target.closest('.picker-btn');
+  if (!btn) return;
+  settings.collectibleStyle = btn.dataset.style;
+  saveSettings();
+  syncPickerUI();
+  if (scene) scene.setCollectibleEmoji(currentGlyph());
+  updateAcornCounter();
+});
+syncPickerUI();
 
 function openSettings()  { settingsOverlay.classList.remove('hidden'); }
 function closeSettings() { settingsOverlay.classList.add('hidden'); }
@@ -47,7 +85,10 @@ settingsOverlay.addEventListener('click', (ev) => {
   if (ev.target === settingsOverlay) closeSettings();
 });
 
-// ----- HTML acorn counter (driven by GameScene callbacks) -----------------
+// ----- HTML collectible counter (driven by GameScene callbacks) -----------
+// Order is decoupled from maze placement — collected items fill the
+// leftmost slots, missed ones sit dim on the right.  All slots equal:
+// any pickup advances the count.
 function updateAcornCounter() {
   const cs = scene?.collectibles ?? [];
   if (!settings.collectibles || cs.length === 0) {
@@ -55,9 +96,12 @@ function updateAcornCounter() {
     return;
   }
   acornCounter.classList.remove('hidden');
-  acornCounter.innerHTML = cs
-    .map(c => `<span class="acorn${c.picked ? '' : ' dim'}">🌰</span>`)
-    .join('');
+  const glyph  = currentGlyph();
+  const earned = cs.filter(c => c.picked).length;
+  const total  = cs.length;
+  const won    = `<span class="acorn">${glyph}</span>`.repeat(earned);
+  const lost   = `<span class="acorn dim">${glyph}</span>`.repeat(total - earned);
+  acornCounter.innerHTML = won + lost;
 }
 
 // ----- Per-theme background gradient --------------------------------------
@@ -149,6 +193,7 @@ function startGame(difficulty, styleIndex) {
     // GameScene picks a random theme — fresh starts from the menu.
     styleIndex,
     showCollectibles:     settings.collectibles,
+    collectibleEmoji:     currentGlyph(),
     onCollectiblesUpdate: updateAcornCounter,
     onThemeChange:        applyTheme,
     onWin:                showWinModal,
@@ -206,8 +251,9 @@ function showWinModal() {
     // acorns are rendered first (animated), missed ones last (static
     // dim placeholders, no pop, no halo) — the row reads "X / 3" at a
     // glance without forcing a meaning onto position.
-    const won  = '<span>🌰</span>'.repeat(earned);
-    const lost = '<span class="dim">🌰</span>'.repeat(total - earned);
+    const glyph = currentGlyph();
+    const won   = `<span>${glyph}</span>`.repeat(earned);
+    const lost  = `<span class="dim">${glyph}</span>`.repeat(total - earned);
     winAcorns.innerHTML = won + lost;
     winTagline.textContent = WIN_TAGLINES[earned] ?? WIN_TAGLINES[0];
   } else {

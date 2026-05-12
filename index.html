@@ -131,10 +131,24 @@
       <label class="toggle-row" for="toggle-collectibles">
         <span class="toggle-text">
           <span class="toggle-label">Collectibles</span>
-          <span class="toggle-detail">Show 3 acorns to collect for star ratings.</span>
+          <span class="toggle-detail">Show 3 items to collect for star ratings.</span>
         </span>
         <input type="checkbox" id="toggle-collectibles" class="toggle-input" />
       </label>
+
+      <!-- Style picker — only meaningful when collectibles are on, but
+           kept visible for discoverability. -->
+      <div class="picker-row" role="radiogroup" aria-label="Collectible style">
+        <span class="toggle-text">
+          <span class="toggle-label">Style</span>
+          <span class="toggle-detail">Pick what to collect in mazes.</span>
+        </span>
+        <div class="picker" id="collectible-picker">
+          <button class="picker-btn" data-style="acorn"  aria-label="Acorn">🌰</button>
+          <button class="picker-btn" data-style="star"   aria-label="Star">⭐</button>
+          <button class="picker-btn" data-style="flower" aria-label="Flower">🌸</button>
+        </div>
+      </div>
 
       <button class="settings-done" id="btn-close-settings">Done</button>
     </div>

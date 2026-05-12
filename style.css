@@ -641,6 +641,53 @@ canvas#game {
   transform: translateX(20px);
 }
 
+/* Collectible-style picker — same row layout as .toggle-row but the
+   right side is a 3-button segmented control instead of a toggle. */
+.picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.picker {
+  display: inline-flex;
+  flex-shrink: 0;
+  background: rgba(92, 59, 26, 0.10);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
+}
+.picker-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  width: 40px;
+  height: 36px;
+  font-size: 22px;
+  line-height: 1;
+  border-radius: 9px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s ease,
+    transform 0.05s ease;
+}
+.picker-btn:hover { background: rgba(92, 59, 26, 0.10); }
+.picker-btn:active { transform: scale(0.94); }
+.picker-btn.active {
+  background: var(--bg);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
 .settings-done {
   display: block;
   width: 100%;

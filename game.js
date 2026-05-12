@@ -25,9 +25,10 @@ const START_EMOJIS = [
   '🐹', '🐭', '🦉', '🐦', '🐸', '🦋', '🐛', '🦡',
 ];
 
-// What the cursor picks up.  Acorn matches the forest theme; one item
-// per collectible across all 6 themes for visual consistency.
-const COLLECTIBLE_EMOJI = '🌰';
+// Default collectible emoji.  The actual glyph rendered in the maze is
+// configurable via the settings panel (acorn / star / flower) and is
+// passed in through the GameScene constructor or setCollectibleEmoji().
+const DEFAULT_COLLECTIBLE_EMOJI = '🌰';
 
 // Reserved header strip at the top of the viewport for the menu button (and
 // any future UI).  The maze is laid out below this band so its top row
@@ -115,6 +116,7 @@ export class GameScene {
    *   onWin?:                () => void,
    *   styleIndex?:           number,
    *   showCollectibles?:     boolean,
+   *   collectibleEmoji?:     string,
    * }} [opts]
    */
   constructor(canvas, difficulty, opts = {}) {
@@ -129,6 +131,7 @@ export class GameScene {
     this._onThemeChange = opts.onThemeChange         ?? (() => {});
     this._onWin         = opts.onWin                 ?? (() => {});
     this.showCollectibles = opts.showCollectibles ?? true;
+    this.collectibleEmoji = opts.collectibleEmoji ?? DEFAULT_COLLECTIBLE_EMOJI;
 
     this.timed         = [];      // {x,y,t} subsampled drag points (for trail)
     this.foots         = [];      // {x,y} permanent footstep dots
@@ -693,7 +696,8 @@ export class GameScene {
     ctx.font         = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'alphabetic';
-    const m = ctx.measureText(COLLECTIBLE_EMOJI);
+    const glyph = this.collectibleEmoji;
+    const m = ctx.measureText(glyph);
     const baseYOffset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
 
     for (const c of this.collectibles) {
@@ -710,7 +714,7 @@ export class GameScene {
         ctx.translate(center.x, center.y);
         ctx.scale(scale, scale);
         ctx.fillStyle = this.style.wallColor;
-        ctx.fillText(COLLECTIBLE_EMOJI, 0, baseYOffset);
+        ctx.fillText(glyph, 0, baseYOffset);
         ctx.restore();
       } else {
         // Soft pulsing glow + emoji.  Phase offset by cell coords so all
@@ -722,7 +726,7 @@ export class GameScene {
         ctx.fill();
 
         ctx.fillStyle = this.style.wallColor;
-        ctx.fillText(COLLECTIBLE_EMOJI, center.x, center.y + baseYOffset);
+        ctx.fillText(glyph, center.x, center.y + baseYOffset);
       }
     }
   }
@@ -974,6 +978,14 @@ export class GameScene {
     this.isDrawing     = false;
     this._onThemeChange(this.style);   // body gradient cycles with the theme
     this._buildMaze();
+  }
+
+  /** Switch the collectible glyph mid-game (settings → acorn / star /
+   *  flower).  Affects both the canvas-drawn maze items and the HUD via
+   *  the next onCollectiblesUpdate fire. */
+  setCollectibleEmoji(emoji) {
+    this.collectibleEmoji = emoji;
+    this._onColUpd();
   }
 
   /** Toggle collectibles on/off mid-game.  Turning ON places acorns into
