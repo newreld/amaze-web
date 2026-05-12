@@ -81,6 +81,24 @@ canvas#game {
   pointer-events: none;
 }
 
+/* The menu screen has two pieces of flow content (the card and the
+   marketing blurb) plus a fixed-positioned Settings pill in the corner
+   that doesn't participate in flow.  We override the generic .overlay
+   centering for #menu only so the card sits roughly mid-screen and the
+   marketing copy is pinned to the bottom — without absolute
+   positioning, just grid rows that breathe with viewport height. */
+#menu {
+  display: grid;
+  grid-template-rows: 1fr auto 1fr auto;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  align-items: center;
+  gap: 0;
+  padding: clamp(20px, 4vh, 40px) 20px clamp(20px, 4vh, 36px);
+}
+#menu .menu-frame      { grid-row: 2; }
+#menu .menu-marketing  { grid-row: 4; align-self: end; }
+
 /* Sun illustration — anchored to the card's top-right corner, with the
    sun's CENTRE exactly on the corner so half the disc spills outside
    the card and half overlaps onto it like a setting sun behind the
@@ -164,7 +182,9 @@ canvas#game {
 .sub {
   font-size: 15px;
   line-height: 1.4;
-  margin: 0 auto 18px;
+  /* Generous vertical breathing room — sits between the wood stamp and
+     the difficulty buttons, so both spacings matter visually. */
+  margin: 18px auto 24px;
   max-width: 320px;
   color: #4a2e15;
 }
@@ -277,16 +297,17 @@ canvas#game {
   line-height: 1;
 }
 
-/* Marketing tagline below the card. */
+/* Marketing copy pinned to the bottom of the menu screen via the
+   #menu grid layout below.  No italics, no absolute positioning. */
 .menu-marketing {
-  max-width: 720px;
+  max-width: 540px;
   margin: 0;
+  padding: 0 8px;
   text-align: center;
   font-size: 13px;
   line-height: 1.5;
   color: #4a2e15;
-  font-style: italic;
-  opacity: 0.85;
+  opacity: 0.8;
 }
 
 /* ---- In-game top bar ----------------------------------------------------- */
