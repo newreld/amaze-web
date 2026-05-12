@@ -675,6 +675,7 @@ canvas#game {
   user-select: none;
   -webkit-user-select: none;
 }
+.picker-row.hidden { display: none; }
 .picker {
   display: inline-flex;
   flex-shrink: 0;

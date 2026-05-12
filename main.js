@@ -14,6 +14,7 @@ const winTagline    = document.getElementById('win-tagline');
 const settingsOverlay     = document.getElementById('settings-overlay');
 const toggleCollectibles  = document.getElementById('toggle-collectibles');
 const collectiblePicker   = document.getElementById('collectible-picker');
+const pickerRow           = document.getElementById('picker-row');
 
 let scene = null;
 
@@ -48,13 +49,21 @@ function currentGlyph() {
   return COLLECTIBLE_GLYPHS[settings.collectibleStyle] ?? '🌰';
 }
 
+// Style picker only makes sense when collectibles are on — hide the
+// whole row otherwise so the panel doesn't show a dead control.
+function syncPickerRowVisibility() {
+  pickerRow.classList.toggle('hidden', !settings.collectibles);
+}
+
 toggleCollectibles.checked = settings.collectibles;
 toggleCollectibles.addEventListener('change', () => {
   settings.collectibles = toggleCollectibles.checked;
   saveSettings();
   if (scene) scene.setShowCollectibles(settings.collectibles);
   updateAcornCounter();
+  syncPickerRowVisibility();
 });
+syncPickerRowVisibility();
 
 // Style picker — segmented control.  Marks the active button, updates
 // the live scene + HUD on change.
