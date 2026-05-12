@@ -524,44 +524,56 @@ export class GameScene {
         this._drawCollectibles(now);
       }
 
-      // Trail — segments thickening toward the head, fading at the tail.
-      // Two passes:
-      //   1. Wide low-alpha stroke under a Canvas2D blur filter.  The
-      //      filter smooths the per-segment hard edges into a continuous
-      //      glow — without it, overlapping segment caps stack into a
-      //      visible chain of circles.
-      //   2. Sharp coloured line on top (no filter).
+      // Trail — drawn as a SINGLE smoothed path stroked twice (glow +
+      // sharp).  Previous implementation stroked each segment as its
+      // own path with a width interpolated from tail→head; consecutive
+      // segments with different widths and round caps produced a
+      // beaded "string of circles" look that no amount of blur could
+      // hide because the underlying shape was lumpy.
+      //
+      // The path uses quadratic curves through midpoints between
+      // consecutive samples (a standard polyline-smoothing trick).
+      // This both:
+      //   • turns the polyline jags between touch samples into curves
+      //   • lets a single uniform stroke render the whole thing in
+      //     one go, so the result is a continuous ribbon.
       const n = this.timed.length;
       if (n >= 2) {
         ctx.lineCap  = 'round';
         ctx.lineJoin = 'round';
-        const denom = Math.max(n - 1, 1);
 
-        // Glow pass — blurred wider stroke.
-        ctx.save();
-        ctx.filter = 'blur(5px)';
-        ctx.strokeStyle = this._withAlpha(this.style.trailColor, 0.55);
-        for (let i = 0; i < n - 1; i++) {
-          const t = (i + 1) / denom;
-          ctx.lineWidth = Math.max(2, t * this._headR * 1.8);
-          ctx.beginPath();
-          ctx.moveTo(this.timed[i].x,     this.timed[i].y);
-          ctx.lineTo(this.timed[i + 1].x, this.timed[i + 1].y);
-          ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(this.timed[0].x, this.timed[0].y);
+        if (n === 2) {
+          ctx.lineTo(this.timed[1].x, this.timed[1].y);
+        } else {
+          // Quadratic through midpoints: previous sample is the curve's
+          // control point, midpoint between previous and next is the
+          // curve's endpoint.  Last segment falls back to a straight
+          // line so the trail ends exactly at the most recent sample.
+          for (let i = 1; i < n - 1; i++) {
+            const xc = (this.timed[i].x + this.timed[i + 1].x) / 2;
+            const yc = (this.timed[i].y + this.timed[i + 1].y) / 2;
+            ctx.quadraticCurveTo(this.timed[i].x, this.timed[i].y, xc, yc);
+          }
+          ctx.lineTo(this.timed[n - 1].x, this.timed[n - 1].y);
         }
+
+        // Glow pass — wide blurred stroke.  ctx.filter does the heavy
+        // lifting; this stroke is uniform so the blur falls off
+        // symmetrically from the centreline.
+        ctx.save();
+        ctx.filter = 'blur(6px)';
+        ctx.strokeStyle = this._withAlpha(this.style.trailColor, 0.55);
+        ctx.lineWidth = Math.max(3, this._headR * 1.6);
+        ctx.stroke();
         ctx.restore();
 
-        // Sharp pass — main coloured line (slimmer than before so the
-        // glow is the dominant visual, line just defines the path).
+        // Sharp pass — coloured line over the glow.  Same path, same
+        // canvas state, just a thinner non-blurred re-stroke.
         ctx.strokeStyle = this.style.trailColor;
-        for (let i = 0; i < n - 1; i++) {
-          const t = (i + 1) / denom;
-          ctx.lineWidth = Math.max(0.5, t * this._headR * 0.85);
-          ctx.beginPath();
-          ctx.moveTo(this.timed[i].x,     this.timed[i].y);
-          ctx.lineTo(this.timed[i + 1].x, this.timed[i + 1].y);
-          ctx.stroke();
-        }
+        ctx.lineWidth = Math.max(1, this._headR * 0.75);
+        ctx.stroke();
       }
 
       // Particles — small drifting motes spawned at the cursor.  Drawn
@@ -778,10 +790,12 @@ export class GameScene {
    */
   _clampToCell(p, c) {
     const b = this._cellBounds(c);
-    // Margin slightly larger than the head radius so there's a visible gap
-    // between the cursor and any wall it's pressed against.  Scales with
-    // headR so tight mobile cells don't lose all their inner movement room.
-    const m = this._headR + Math.max(2, this._headR * 0.3);
+    // Margin just past the head radius — only enough to keep the cursor
+    // visually clear of the wall sprite, no extra padding.  Earlier
+    // versions added ~30% of headR on top, which doubled up on the
+    // visual "stopping distance" and made narrow approaches feel
+    // walled-off.  +1 px is enough for hairline separation.
+    const m = this._headR + 1;
 
     // Maze 'top' direction = +row = upper edge in canvas (smaller y).
     // 'bottom' = -row = lower edge (larger y).
