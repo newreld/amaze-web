@@ -539,7 +539,9 @@ export class GameScene {
       // geometry instead of varying stroke width.
       const n = this.timed.length;
       if (n >= 2) {
-        const maxHalfW = Math.max(2, this._headR * 0.85);
+        // Slimmer sharp trail — the glow does most of the visual work,
+        // so the coloured ribbon itself stays delicate.
+        const maxHalfW = Math.max(1.5, this._headR * 0.50);
         const pts = this.timed;
 
         // Build perpendicular offsets at each sample.
@@ -564,7 +566,9 @@ export class GameScene {
           const py =  dx / len;
 
           const t = i / (n - 1);          // 0 at oldest, 1 at cursor
-          const halfW = (1 - t) * maxHalfW;
+          // Taper from zero at the oldest sample (tail) to full width
+          // at the cursor head — comet-trail direction.
+          const halfW = t * maxHalfW;
           left[i]  = { x: pts[i].x + px * halfW, y: pts[i].y + py * halfW };
           right[i] = { x: pts[i].x - px * halfW, y: pts[i].y - py * halfW };
         }
@@ -576,25 +580,34 @@ export class GameScene {
         for (let i = n - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
         ctx.closePath();
 
-        // Outer halo — heavy blur, low alpha, fully fades out before
-        // reaching the bg.  Gaussian σ≈26 px puts the 3σ extinction
-        // radius near 78 px from the shape edge; combined with 20%
-        // alpha source, the outermost pixels read as 0.
+        // Glow stack — three layered blurred fills so the bloom is
+        // strong near the ribbon and fades imperceptibly into the bg.
+        // Stronger than before: higher alphas + larger outer radius.
+
+        // Far halo — softest, widest spread.  σ ≈ 32 px puts the 3σ
+        // extinction near 95 px; with 0.30 source alpha the outermost
+        // ring is well below visible threshold.
         ctx.save();
-        ctx.filter = 'blur(26px)';
-        ctx.fillStyle = this._withAlpha(this.style.trailColor, 0.20);
+        ctx.filter = 'blur(32px)';
+        ctx.fillStyle = this._withAlpha(this.style.trailColor, 0.30);
         ctx.fill();
         ctx.restore();
 
-        // Inner halo — moderate blur, mid alpha, carries the saturated
-        // colour close to the ribbon core.
+        // Mid halo — saturates the area immediately around the ribbon.
         ctx.save();
-        ctx.filter = 'blur(10px)';
-        ctx.fillStyle = this._withAlpha(this.style.trailColor, 0.45);
+        ctx.filter = 'blur(14px)';
+        ctx.fillStyle = this._withAlpha(this.style.trailColor, 0.55);
         ctx.fill();
         ctx.restore();
 
-        // Sharp pass — solid coloured ribbon.
+        // Inner halo — soft bloom hugging the core.
+        ctx.save();
+        ctx.filter = 'blur(4px)';
+        ctx.fillStyle = this._withAlpha(this.style.trailColor, 0.75);
+        ctx.fill();
+        ctx.restore();
+
+        // Sharp pass — slim solid coloured ribbon on top.
         ctx.fillStyle = this.style.trailColor;
         ctx.fill();
       }
