@@ -524,71 +524,79 @@ export class GameScene {
         this._drawCollectibles(now);
       }
 
-      // Trail — drawn as a SINGLE smoothed path stroked twice (glow +
-      // sharp).  Previous implementation stroked each segment as its
-      // own path with a width interpolated from tail→head; consecutive
-      // segments with different widths and round caps produced a
-      // beaded "string of circles" look that no amount of blur could
-      // hide because the underlying shape was lumpy.
+      // Trail — drawn as a tapered ribbon polygon, filled (not stroked)
+      // so the width can vary continuously from one end to the other
+      // without the per-segment "string of circles" look that plain
+      // strokes produce.  Built once, then fill-painted three times:
+      // two wide blurred passes (outer + inner halo) and one sharp
+      // colour pass.  Big blur radii push the outer halo's alpha below
+      // visible threshold long before it reaches the bg, so there's no
+      // perceptible glow edge.
       //
-      // The path uses quadratic curves through midpoints between
-      // consecutive samples (a standard polyline-smoothing trick).
-      // This both:
-      //   • turns the polyline jags between touch samples into curves
-      //   • lets a single uniform stroke render the whole thing in
-      //     one go, so the result is a continuous ribbon.
+      // Width tapers from max half-width at the OLDEST sample (start
+      // cell) down to zero at the cursor head — same shape the trail
+      // had before the single-path refactor, but now produced by
+      // geometry instead of varying stroke width.
       const n = this.timed.length;
       if (n >= 2) {
-        ctx.lineCap  = 'round';
-        ctx.lineJoin = 'round';
+        const maxHalfW = Math.max(2, this._headR * 0.85);
+        const pts = this.timed;
 
-        ctx.beginPath();
-        ctx.moveTo(this.timed[0].x, this.timed[0].y);
-        if (n === 2) {
-          ctx.lineTo(this.timed[1].x, this.timed[1].y);
-        } else {
-          // Quadratic through midpoints: previous sample is the curve's
-          // control point, midpoint between previous and next is the
-          // curve's endpoint.  Last segment falls back to a straight
-          // line so the trail ends exactly at the most recent sample.
-          for (let i = 1; i < n - 1; i++) {
-            const xc = (this.timed[i].x + this.timed[i + 1].x) / 2;
-            const yc = (this.timed[i].y + this.timed[i + 1].y) / 2;
-            ctx.quadraticCurveTo(this.timed[i].x, this.timed[i].y, xc, yc);
+        // Build perpendicular offsets at each sample.
+        const left  = new Array(n);
+        const right = new Array(n);
+        for (let i = 0; i < n; i++) {
+          // Tangent: central difference, with one-sided at endpoints.
+          let dx, dy;
+          if (i === 0) {
+            dx = pts[1].x - pts[0].x;
+            dy = pts[1].y - pts[0].y;
+          } else if (i === n - 1) {
+            dx = pts[n - 1].x - pts[n - 2].x;
+            dy = pts[n - 1].y - pts[n - 2].y;
+          } else {
+            dx = pts[i + 1].x - pts[i - 1].x;
+            dy = pts[i + 1].y - pts[i - 1].y;
           }
-          ctx.lineTo(this.timed[n - 1].x, this.timed[n - 1].y);
+          const len = Math.hypot(dx, dy) || 1;
+          // Perpendicular = tangent rotated 90° (-dy, dx) / len.
+          const px = -dy / len;
+          const py =  dx / len;
+
+          const t = i / (n - 1);          // 0 at oldest, 1 at cursor
+          const halfW = (1 - t) * maxHalfW;
+          left[i]  = { x: pts[i].x + px * halfW, y: pts[i].y + py * halfW };
+          right[i] = { x: pts[i].x - px * halfW, y: pts[i].y - py * halfW };
         }
 
-        // Glow passes (layered) — two blurred strokes so the falloff
-        // from core to background is gradual rather than a single
-        // visible blur edge.
-        //
-        //   Outer halo: heavy blur + low alpha + wide stroke.  This is
-        //     what fades imperceptibly into the bg — a 14 px Gaussian
-        //     spreads the source alpha across ~30 px each side, so the
-        //     outermost pixels are near zero by the time they reach
-        //     anything the eye can pick up as an edge.
-        //   Inner glow: medium blur, higher alpha, narrower stroke.
-        //     Carries the saturated colour close to the line.
+        // Close the ribbon: left edge forwards, right edge backwards.
+        ctx.beginPath();
+        ctx.moveTo(left[0].x, left[0].y);
+        for (let i = 1; i < n; i++) ctx.lineTo(left[i].x, left[i].y);
+        for (let i = n - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+        ctx.closePath();
+
+        // Outer halo — heavy blur, low alpha, fully fades out before
+        // reaching the bg.  Gaussian σ≈26 px puts the 3σ extinction
+        // radius near 78 px from the shape edge; combined with 20%
+        // alpha source, the outermost pixels read as 0.
         ctx.save();
-        ctx.filter = 'blur(14px)';
-        ctx.strokeStyle = this._withAlpha(this.style.trailColor, 0.35);
-        ctx.lineWidth = Math.max(5, this._headR * 2.2);
-        ctx.stroke();
+        ctx.filter = 'blur(26px)';
+        ctx.fillStyle = this._withAlpha(this.style.trailColor, 0.20);
+        ctx.fill();
         ctx.restore();
 
+        // Inner halo — moderate blur, mid alpha, carries the saturated
+        // colour close to the ribbon core.
         ctx.save();
-        ctx.filter = 'blur(5px)';
-        ctx.strokeStyle = this._withAlpha(this.style.trailColor, 0.55);
-        ctx.lineWidth = Math.max(3, this._headR * 1.3);
-        ctx.stroke();
+        ctx.filter = 'blur(10px)';
+        ctx.fillStyle = this._withAlpha(this.style.trailColor, 0.45);
+        ctx.fill();
         ctx.restore();
 
-        // Sharp pass — crisp coloured line over the glow.  Same path,
-        // same canvas state, just a thin non-blurred re-stroke.
-        ctx.strokeStyle = this.style.trailColor;
-        ctx.lineWidth = Math.max(1, this._headR * 0.75);
-        ctx.stroke();
+        // Sharp pass — solid coloured ribbon.
+        ctx.fillStyle = this.style.trailColor;
+        ctx.fill();
       }
 
       // Particles — small drifting motes spawned at the cursor.  Drawn
